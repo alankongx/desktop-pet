@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大圣喵 · 桌面桌宠</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="size-medium">
+  <!-- 整个可拖拽容器 -->
+  <div id="pet-root">
+    <!-- 悟空话术气泡：默认可见，老板任何时候都能看到 -->
+    <div id="speech-bubble">
+      <span id="speech-text">俺老孙在此！</span>
+    </div>
+
+    <!-- 大圣喵形象（自带 LED 屏表情，原图） -->
+    <div id="pet-stage">
+      <div id="pet-body">
+        <img id="dasheng" src="../assets/dasheng.png" alt="大圣喵" draggable="false">
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

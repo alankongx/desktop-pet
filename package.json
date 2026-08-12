@@ -1,0 +1,12 @@
+{
+  "name": "dasheng-pet",
+  "version": "1.0.0",
+  "description": "大圣喵桌面桌宠 - 透明悬浮 Electron 窗口（独立于任何客户端，装好即可用）",
+  "main": "main.js",
+  "scripts": {
+    "start": "node start.js"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}

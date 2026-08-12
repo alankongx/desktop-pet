@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.log
+
+# 未使用的实验/中间产物（本地保留，不进仓库）
+assets/A_cute_chibi_cat_mascot_charac_*.png
+assets/mascot.png
+assets/miao.png
