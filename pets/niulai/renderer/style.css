@@ -1,0 +1,253 @@
+/* 牛来 - 桌面桌宠样式（与大圣派特同架构）
+   - 三档尺寸：小 / 中 / 大
+   - 7 态图片：anzhong 暗中 / shangtou 上头 / bailan 摆烂 /
+     wuyu 无语 / kaibai 开摆 / fafeng 发疯 / nishuode 你说的
+   - 气泡走牛气红金配色（中国股市红涨），随尺寸档缩放
+   - body overflow:hidden 防止滚动条；拖拽用 IPC，不用 CSS drag
+*/
+
+/* ===== 尺寸变量：默认中档 ===== */
+/* 7 态图近正方形（0.94~1.15），winW 取最宽图 kaibai 1.15×petH+余量 */
+:root {
+  --win-w: 160px;
+  --win-h: 214px;
+  --pet-h: 128px;
+  --bubble-font: 14px;
+  --bubble-pad-y: 3px;
+  --bubble-pad-x: 9px;
+  --bubble-max-w: 170px;
+  --bubble-max-h: 86px;
+}
+body.size-small {
+  --win-w: 120px; --win-h: 152px;
+  --pet-h: 96px;
+  --bubble-font: 10px;
+  --bubble-pad-y: 2px; --bubble-pad-x: 7px;
+  --bubble-max-w: 130px;
+  --bubble-max-h: 56px;
+}
+body.size-medium {
+  --win-w: 160px; --win-h: 214px;
+  --pet-h: 128px;
+  --bubble-font: 14px;
+  --bubble-pad-y: 3px; --bubble-pad-x: 9px;
+  --bubble-max-w: 170px;
+  --bubble-max-h: 86px;
+}
+body.size-large {
+  --win-w: 235px; --win-h: 322px;
+  --pet-h: 192px;
+  --bubble-font: 21px;
+  --bubble-pad-y: 5px; --bubble-pad-x: 13px;
+  --bubble-max-w: 250px;
+  --bubble-max-h: 130px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: var(--win-w);
+  height: var(--win-h);
+  overflow: hidden;
+  background: transparent !important;
+  user-select: none;
+  cursor: grab;
+}
+html, body:active { cursor: grabbing; }
+
+#pet-root {
+  position: relative;
+  width: var(--win-w);
+  height: var(--win-h);
+  display: block;
+}
+
+#pet-stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: var(--win-w);
+  height: var(--pet-h);
+  animation: float 3.6s ease-in-out infinite;
+  transform-origin: 50% 90%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+#pet-body {
+  position: relative;
+  width: var(--win-w);
+  height: var(--pet-h);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+#niulai {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 2px 5px rgba(200, 80, 40, 0.28));
+  pointer-events: none;
+  -webkit-user-drag: none;
+  transition: filter 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* ===== 7 态情绪滤镜 ===== */
+/* 暗中观察：默认，微微暖光 */
+#pet-root.mood-anzhong #niulai {
+  filter: drop-shadow(0 2px 5px rgba(200, 80, 40, 0.28)) brightness(1.02) saturate(1.05);
+}
+/* 上头了：亮 + 饱和 + 轻微抖动 */
+#pet-root.mood-shangtou #niulai {
+  filter: drop-shadow(0 2px 8px rgba(255, 60, 30, 0.5)) brightness(1.12) saturate(1.3);
+  transform: scale(1.03);
+}
+#pet-root.mood-shangtou #pet-stage {
+  animation: floatShake 0.5s ease-in-out infinite;
+}
+/* 摆烂：调暗 + 降低饱和 */
+#pet-root.mood-bailan #niulai {
+  filter: drop-shadow(0 2px 5px rgba(200, 80, 40, 0.28)) brightness(0.88) saturate(0.75);
+}
+/* 无语：偏冷 + 微暗 */
+#pet-root.mood-wuyu #niulai {
+  filter: drop-shadow(0 2px 5px rgba(200, 80, 40, 0.28)) brightness(0.93) saturate(0.85) hue-rotate(-5deg);
+}
+/* 开摆：亮 + 饱和 + 弹跳 */
+#pet-root.mood-kaibai #niulai {
+  filter: drop-shadow(0 2px 8px rgba(255, 60, 30, 0.5)) brightness(1.10) saturate(1.25);
+  transform: scale(1.02);
+}
+#pet-root.mood-kaibai #pet-stage {
+  animation: floatBounce 1.2s ease-in-out infinite;
+}
+/* 发疯：最亮 + 最大 + 疯狂抖动 */
+#pet-root.mood-fafeng #niulai {
+  filter: drop-shadow(0 3px 10px rgba(255, 40, 20, 0.55)) brightness(1.15) saturate(1.4);
+  transform: scale(1.05);
+}
+#pet-root.mood-fafeng #pet-stage {
+  animation: floatCrazy 0.3s ease-in-out infinite;
+}
+/* 你说的：中性 + 轻微降饱和 */
+#pet-root.mood-nishuode #niulai {
+  filter: drop-shadow(0 2px 5px rgba(200, 80, 40, 0.28)) brightness(0.97) saturate(0.9);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+@keyframes floatShake {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(-1px) rotate(-1.5deg); }
+  75%      { transform: translateY(-1px) rotate(1.5deg); }
+}
+@keyframes floatBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.02); }
+}
+@keyframes floatCrazy {
+  0%, 100% { transform: translateY(0) rotate(-2deg) scale(1); }
+  25%      { transform: translateY(-3px) rotate(2deg) scale(1.03); }
+  50%      { transform: translateY(-1px) rotate(-1deg) scale(1); }
+  75%      { transform: translateY(-2px) rotate(3deg) scale(1.02); }
+}
+
+/* 话术气泡 */
+#speech-bubble {
+  display: block;
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: var(--bubble-max-w);
+  transform: translateX(-50%);
+  background: #fff5f0;
+  border: 1px solid #e8552b;
+  border-radius: 6px;
+  padding: var(--bubble-pad-y) var(--bubble-pad-x);
+  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+  font-size: var(--bubble-font);
+  font-weight: 700;
+  color: #b8260c;
+  box-shadow: 0 1px 5px rgba(232, 85, 43, 0.4);
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  max-width: var(--bubble-max-w);
+  max-height: var(--bubble-max-h);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.3;
+  z-index: 10;
+  pointer-events: none;
+  animation: bubblePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+#speech-text {
+  display: block;
+  white-space: normal;
+  word-break: inherit;
+  overflow-wrap: inherit;
+}
+
+#speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid #fff5f0;
+}
+
+#speech-bubble.hidden {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.6);
+  pointer-events: none;
+  transition: opacity 0.22s, transform 0.22s;
+}
+
+@keyframes bubblePop {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  60%  { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* 拖拽反馈 */
+#pet-root.dragging #pet-stage {
+  filter: drop-shadow(0 3px 8px rgba(200, 80, 40, 0.35));
+  animation: none;
+}
+
+/* 进入 bounce */
+#pet-root.attention #pet-stage {
+  animation: bounce 0.5s ease-in-out 2;
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-3px) scale(1.05); }
+}
+
+/* 三击隐身 */
+#pet-root.hidden-pet {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.4);
+  transition: opacity 0.5s, transform 0.5s;
+}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>牛来 · 桌面桌宠</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="size-medium">
+  <!-- 整个可拖拽容器 -->
+  <div id="pet-root" class="mood-anzhong">
+    <!-- 牛来话术气泡：默认可见 -->
+    <div id="speech-bubble">
+      <span id="speech-text">牛来！牛市快来了！</span>
+    </div>
+
+    <!-- 牛来形象（7 态：暗中 / 上头 / 摆烂 / 无语 / 开摆 / 发疯 / 你说的） -->
+    <div id="pet-stage">
+      <div id="pet-body">
+        <img id="niulai" src="../assets/anzhong.png" alt="牛来" draggable="false">
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
