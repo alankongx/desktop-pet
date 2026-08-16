@@ -1,0 +1,12 @@
+{
+  "name": "auroraping-pet",
+  "version": "1.0.0",
+  "description": "极光萌可桌宠 - 透明悬浮 Electron 窗口（与大圣派特同架构，奇妙萌可·极光萌可 4 态）",
+  "main": "main.js",
+  "scripts": {
+    "start": "node start.js"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}

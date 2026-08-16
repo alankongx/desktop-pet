@@ -14,9 +14,9 @@ let win = null;
 // 小档 = 0.75×，大档 = 1.5×
 // bubbleH = 头顶气泡占位；winH = petH + bubbleH
 const SIZE_PRESETS = {
-  small:  { petW: 84,  petH: 96,  bubbleH: 14, bubbleFont: 10, padX: 7,  padY: 2 },
-  medium: { petW: 112, petH: 128, bubbleH: 18, bubbleFont: 14, padX: 9,  padY: 3 },
-  large:  { petW: 168, petH: 192, bubbleH: 28, bubbleFont: 21, padX: 13, padY: 5 },
+  small:  { petW: 84,  petH: 96,  bubbleH: 60,  bubbleFont: 10, padX: 7,  padY: 2 },
+  medium: { petW: 112, petH: 128, bubbleH: 90,  bubbleFont: 14, padX: 9,  padY: 3 },
+  large:  { petW: 168, petH: 192, bubbleH: 140, bubbleFont: 21, padX: 13, padY: 5 },
 };
 const WIN_PAD_RIGHT = 40;
 const WIN_PAD_BOTTOM = 40;

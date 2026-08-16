@@ -1,8 +1,10 @@
 node_modules/
+node_modules
 .DS_Store
 *.log
+config.json
 
-# 未使用的实验/中间产物（本地保留，不进仓库）
-assets/A_cute_chibi_cat_mascot_charac_*.png
-assets/mascot.png
-assets/miao.png
+# 实验中间产物（不进仓库）
+pets/dasheng/assets/A_cute_chibi_cat_mascot_charac_*.png
+pets/dasheng/assets/mascot.png
+pets/dasheng/assets/miao.png

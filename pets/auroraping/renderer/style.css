@@ -1,0 +1,236 @@
+/* 极光萌可 - 桌面桌宠样式（与大圣派特同架构）
+   - 三档尺寸：小 / 中 / 大（中档 = 112×128）
+   - 4 态图片：calm 沉静 / wave 打招呼 / excited 极光绽放 / fly 翱翔
+   - 气泡走梦幻极光配色（粉紫），随尺寸档缩放
+   - body overflow:hidden 防止滚动条；拖拽用 IPC，不用 CSS drag
+*/
+
+/* ===== 尺寸变量：默认中档（无 class 时兜底） ===== */
+/* 统一按高度定尺寸（角色身高一致），宽度自适应；
+   winW 取最宽的 fly 图（高宽比 1.44）+ 余量，容纳张开翅膀 */
+:root {
+  --win-w: 192px;
+  --win-h: 218px;
+  --pet-h: 128px;
+  --bubble-font: 14px;
+  --bubble-pad-y: 3px;
+  --bubble-pad-x: 9px;
+  --bubble-max-w: 170px;
+  --bubble-max-h: 90px;
+}
+body.size-small {
+  --win-w: 148px; --win-h: 156px;
+  --pet-h: 96px;
+  --bubble-font: 10px;
+  --bubble-pad-y: 2px; --bubble-pad-x: 7px;
+  --bubble-max-w: 130px;
+  --bubble-max-h: 60px;
+}
+body.size-medium {
+  --win-w: 192px; --win-h: 218px;
+  --pet-h: 128px;
+  --bubble-font: 14px;
+  --bubble-pad-y: 3px; --bubble-pad-x: 9px;
+  --bubble-max-w: 170px;
+  --bubble-max-h: 90px;
+}
+body.size-large {
+  --win-w: 286px; --win-h: 332px;
+  --pet-h: 192px;
+  --bubble-font: 21px;
+  --bubble-pad-y: 5px; --bubble-pad-x: 13px;
+  --bubble-max-w: 255px;
+  --bubble-max-h: 140px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: var(--win-w);
+  height: var(--win-h);
+  overflow: hidden;
+  background: transparent !important;
+  user-select: none;
+  cursor: grab;
+}
+html, body:active { cursor: grabbing; }
+
+/* 整个拖拽容器：宽=窗口宽，高=窗口高（宠物贴底，气泡占顶部） */
+#pet-root {
+  position: relative;
+  width: var(--win-w);
+  height: var(--win-h);
+  display: block;
+}
+
+/* 主舞台：贴底 + 水平居中；宽度铺满窗口，容纳带翅膀的宽图 */
+#pet-stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  width: var(--win-w);
+  height: var(--pet-h);
+  animation: float 3.6s ease-in-out infinite;
+  transform-origin: 50% 90%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+#pet-body {
+  position: relative;
+  width: var(--win-w);
+  height: var(--pet-h);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* 按高度统一缩放：所有状态角色身高一致，翅膀宽度自适应展开 */
+#aurora {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 2px 5px rgba(120, 60, 180, 0.28));
+  pointer-events: none;
+  -webkit-user-drag: none;
+  transition: filter 0.3s ease-out, transform 0.3s ease-out;
+}
+
+/* ===== 4 态情绪滤镜（图片由 renderer.js 切换） ===== */
+/* 沉静：原图，微微柔光 */
+#pet-root.mood-calm #aurora {
+  filter: drop-shadow(0 2px 5px rgba(120, 60, 180, 0.28)) brightness(1.02) saturate(1.05);
+}
+/* 极光绽放：亮 + 饱和 */
+#pet-root.mood-happy #aurora {
+  filter: drop-shadow(0 2px 8px rgba(255, 120, 220, 0.45)) brightness(1.1) saturate(1.3);
+  transform: scale(1.03);
+}
+/* 翱翔：暖光 + 上下飘浮幅度加大 */
+#pet-root.mood-fly #pet-stage {
+  animation: floatFly 2.2s ease-in-out infinite;
+}
+#pet-root.mood-fly #aurora {
+  filter: drop-shadow(0 3px 9px rgba(140, 120, 255, 0.4)) brightness(1.05) saturate(1.15);
+}
+/* 思考：微暗 + 倾斜 */
+#pet-root.mood-thinking #aurora {
+  filter: drop-shadow(0 2px 5px rgba(120, 60, 180, 0.28)) brightness(0.93);
+  transform: rotate(-2deg) translateY(-1px);
+}
+/* 生气：偏红提饱和 */
+#pet-root.mood-angry #aurora {
+  filter: drop-shadow(0 2px 5px rgba(200, 40, 90, 0.4)) hue-rotate(-18deg) saturate(1.45);
+  transform: scale(1.04);
+}
+/* 睡觉：调暗 */
+#pet-root.mood-sleeping #aurora {
+  filter: drop-shadow(0 2px 5px rgba(120, 60, 180, 0.28)) brightness(0.55) saturate(0.7) sepia(0.15);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+@keyframes floatFly {
+  0%, 100% { transform: translateY(0) rotate(1deg); }
+  50%      { transform: translateY(-5px) rotate(-1deg); }
+}
+
+/* 话术气泡：梦幻极光配色，头顶中央，长台词自动换行 */
+#speech-bubble {
+  display: block;
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: var(--bubble-max-w);
+  transform: translateX(-50%);
+  background: #f6efff;
+  border: 1px solid #b98ce8;
+  border-radius: 6px;
+  padding: var(--bubble-pad-y) var(--bubble-pad-x);
+  font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+  font-size: var(--bubble-font);
+  font-weight: 700;
+  color: #4a2578;
+  box-shadow: 0 1px 5px rgba(185, 140, 232, 0.45);
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  max-width: var(--bubble-max-w);
+  max-height: var(--bubble-max-h);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1.3;
+  z-index: 10;
+  pointer-events: none;
+  animation: bubblePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+#speech-text {
+  display: block;
+  white-space: normal;
+  word-break: inherit;
+  overflow-wrap: inherit;
+}
+
+/* 气泡小箭头朝下指向萌可头顶 */
+#speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 4px solid #f6efff;
+}
+
+#speech-bubble.hidden {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.6);
+  pointer-events: none;
+  transition: opacity 0.22s, transform 0.22s;
+}
+
+@keyframes bubblePop {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  60%  { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* 拖拽反馈 */
+#pet-root.dragging #pet-stage {
+  filter: drop-shadow(0 3px 8px rgba(120, 60, 180, 0.35));
+  animation: none;
+}
+
+/* 进入 bounce */
+#pet-root.attention #pet-stage {
+  animation: bounce 0.5s ease-in-out 2;
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-3px) scale(1.05); }
+}
+
+/* 三击隐身（回星星村） */
+#pet-root.hidden-pet {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.4);
+  transition: opacity 0.5s, transform 0.5s;
+}

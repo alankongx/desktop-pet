@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>极光萌可 · 桌面桌宠</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="size-medium">
+  <!-- 整个可拖拽容器 -->
+  <div id="pet-root">
+    <!-- 极光萌可话术气泡：默认可见 -->
+    <div id="speech-bubble">
+      <span id="speech-text">极光萌可，前来赴约！✨</span>
+    </div>
+
+    <!-- 极光萌可形象（4 态：沉静 / 打招呼 / 极光绽放 / 翱翔） -->
+    <div id="pet-stage">
+      <div id="pet-body">
+        <img id="aurora" src="../assets/calm.png" alt="极光萌可" draggable="false">
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -25,9 +25,9 @@
   //  - 发 IPC 让主进程 setBounds 改窗口尺寸（保右下角不动）
   //  - 保存选择到 config.json（重启保持）
   const SIZE_PRESETS = {
-    small:  { winW: 84,  winH: 110, petW: 84,  petH: 96,  bubbleFont: 10, padX: 7,  padY: 2 },
-    medium: { winW: 112, winH: 146, petW: 112, petH: 128, bubbleFont: 14, padX: 9,  padY: 3 },
-    large:  { winW: 168, winH: 220, petW: 168, petH: 192, bubbleFont: 21, padX: 13, padY: 5 },
+    small:  { winW: 84,  winH: 156, petW: 84,  petH: 96,  bubbleFont: 10, padX: 7,  padY: 2 },
+    medium: { winW: 112, winH: 218, petW: 112, petH: 128, bubbleFont: 14, padX: 9,  padY: 3 },
+    large:  { winW: 168, winH: 332, petW: 168, petH: 192, bubbleFont: 21, padX: 13, padY: 5 },
   };
 
   function applySize(name, opts) {

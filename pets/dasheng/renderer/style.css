@@ -9,30 +9,38 @@
 /* ===== 尺寸变量：默认中档（无 class 时兜底） ===== */
 :root {
   --win-w: 112px;
-  --win-h: 146px;
+  --win-h: 218px;
   --pet-w: 112px;
   --pet-h: 128px;
   --bubble-font: 14px;
   --bubble-pad-y: 3px;
   --bubble-pad-x: 9px;
+  --bubble-max-w: 108px;   /* 气泡最大宽度 ≈ 窗口宽，可容纳 ~7 个汉字/行，长台词自动换行 */
+  --bubble-max-h: 90px;    /* 气泡最大高度 ≈ 4 行，超长被截 */
 }
 body.size-small {
-  --win-w: 84px;  --win-h: 110px;
+  --win-w: 84px;  --win-h: 156px;
   --pet-w: 84px;  --pet-h: 96px;
   --bubble-font: 10px;
   --bubble-pad-y: 2px; --bubble-pad-x: 7px;
+  --bubble-max-w: 80px;
+  --bubble-max-h: 60px;
 }
 body.size-medium {
-  --win-w: 112px; --win-h: 146px;
+  --win-w: 112px; --win-h: 218px;
   --pet-w: 112px; --pet-h: 128px;
   --bubble-font: 14px;
   --bubble-pad-y: 3px; --bubble-pad-x: 9px;
+  --bubble-max-w: 108px;
+  --bubble-max-h: 90px;
 }
 body.size-large {
-  --win-w: 168px; --win-h: 220px;
+  --win-w: 168px; --win-h: 332px;
   --pet-w: 168px; --pet-h: 192px;
   --bubble-font: 21px;
   --bubble-pad-y: 5px; --bubble-pad-x: 13px;
+  --bubble-max-w: 162px;
+  --bubble-max-h: 140px;
 }
 
 * {
@@ -54,16 +62,18 @@ html, body:active { cursor: grabbing; }
 /* 整个拖拽容器：宽=窗口宽，高=窗口高（宠物贴底，气泡占顶部） */
 #pet-root {
   position: relative;
-  width: var(--pet-w);
+  width: var(--win-w);
   height: var(--win-h);
-  display: flex;
-  align-items: flex-end;     /* 桌宠贴底，气泡占顶部 */
-  justify-content: center;
+  display: block;                       /* 不再用 flex，避免 flex 子项宽度被容器限制 */
 }
 
-/* 主舞台：贴底 */
+/* 主舞台：贴底 + 水平居中 */
 #pet-stage {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;            /* 水平居中（左右都给 0 + margin auto） */
   width: var(--pet-w);
   height: var(--pet-h);
   animation: float 3.6s ease-in-out infinite;
@@ -115,11 +125,13 @@ html, body:active { cursor: grabbing; }
   50%      { transform: translateY(-2px); }
 }
 
-/* 话术气泡：放回头顶中央，字号随尺寸档缩放 */
+/* 话术气泡：放回头顶中央，字号随尺寸档缩放；长台词自动换行多行 */
 #speech-bubble {
+  display: block;                        /* 块级布局 */
   position: absolute;
   top: 1px;
   left: 50%;
+  width: var(--bubble-max-w);             /* 硬设宽度到 max-width，避免 absolute 元素按内容 shrink */
   transform: translateX(-50%);
   background: #fff8e6;
   border: 1px solid #f4c13a;
@@ -130,14 +142,26 @@ html, body:active { cursor: grabbing; }
   font-weight: 700;
   color: #5a3b00;
   box-shadow: 0 1px 4px rgba(244, 193, 58, 0.4);
-  white-space: normal;                   /* 允许换行，长台词不溢出窗口 */
-  word-break: keep-all;
-  max-width: calc(var(--win-w) - 4px);
+  white-space: normal;                   /* 允许空白换行 */
+  word-break: normal;                    /* 中文按字断、英文按词断（默认行为） */
+  overflow-wrap: break-word;             /* 仅对超长不可断词（如连续英文字符串）强制断行 */
+  max-width: var(--bubble-max-w);         /* 硬上限（兜底） */
+  max-height: var(--bubble-max-h);        /* 气泡最大高度（约 4 行），超长文本被截 */
+  box-sizing: border-box;                 /* 重要：padding 不撑大 */
+  overflow: hidden;
   text-align: center;
-  line-height: 1.25;
+  line-height: 1.3;
   z-index: 10;
   pointer-events: none;
   animation: bubblePop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* span 必须 block + white-space 继承，否则 inline 会被压成单字宽 */
+#speech-text {
+  display: block;
+  white-space: normal;
+  word-break: inherit;
+  overflow-wrap: inherit;
 }
 
 /* 气泡小箭头朝下指向猫头顶 */
