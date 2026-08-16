@@ -16,8 +16,8 @@
 ## 快速安装
 
 ```bash
-git clone git@github.com:alankongx/dasheng-pet.git
-cd dasheng-pet
+git clone git@github.com:alankongx/desktop-pet.git
+cd desktop-pet
 ./install.sh
 ```
 
@@ -108,7 +108,7 @@ pkill -f pets/<pet>/start.js
 ## 仓库结构
 
 ```
-dasheng-pet/
+desktop-pet/
 ├── install.sh              # 合集安装器（自选宠物 + 依赖 + 开机自启）
 ├── README.md               # 本文件
 ├── pets/
