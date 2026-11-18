@@ -38,15 +38,24 @@ async function run(){
         return items.map(i=>i.label);
       },action.label);
       assert.deepEqual(labels,defs.map(item=>item.label));
-      await waitForText(page,'#speech-text',action.speech);
-      console.log('menu/renderer',action.label,action.speech);
+      await waitForText(page,'#speech-text',action.speech[0]);
+      console.log('menu/renderer',action.label,action.speech[0]);
     }
+    const wave=defs.find(a=>a.id==='wave'), cloud=defs.find(a=>a.id==='cloud');
+    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.send('pet-action','wave'));
+    await waitForText(page,'#speech-text',wave.speech[1]);
+    await app.evaluate(({BrowserWindow})=>{
+      const wc=BrowserWindow.getAllWindows()[0].webContents;
+      wc.send('cloud-style','glide');wc.send('pet-action','cloud');
+    });
+    await waitForText(page,'#speech-text',cloud.glideSpeech[0]);
     const hooks=require(path.join(installed,'codex-hook-setup.js'));
     hooks.configure(true);assert(hooks.registered());
     const script=path.join(dir,'dasheng-pet','notify.ps1');
     for(const [id,label] of [['input','等你确认'],['done','已完成']]){
       const r=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-File',script,id],{encoding:'utf8'});
       assert.equal(r.status,0,r.stderr);await waitForText(page,'#codex-state',label);
+      await waitForText(page,'#speech-text',id==='input'?'确认':'这一轮');
       fs.rmSync(path.join(dir,'dasheng-pet',id+'.notice'));
     }
     hooks.configure(false);assert(!hooks.registered());

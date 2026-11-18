@@ -211,38 +211,31 @@ function buildDasheng(T,pictures){
       hull(elbow,[[308,118,125,.33],[313,112,133,.85],[320,103,137,1],[331,103,138,1],[341,107,134,.92],[350,113,130,.69],[354,118,123,.26]],29,13,alloy);
     }else{
       hull(elbow,[[307,354,369,.3],[312,342,373,.79],[322,338,377,1],[334,340,371,1],[344,347,363,.72],[347,351,358,.34]],18,17,bronze);
-      // Anatomical left hand (screen right). The cuff belongs to the forearm,
-      // while palm, thumb and bent fingertips share a separately posed wrist.
-      freeWrist=group(elbow,369,322,23);
-      const palm=new T.Group();freeWrist.add(palm);
-      function pad(parent,mat,x,y,z,w,h,d){
-        const piece=mesh(parent,sphere,mat);piece.position.set(x,y,z);piece.scale.set(w,h,d);return piece;
+      // Closed volumes share the original portrait's coordinates and front texture.
+      // The black wrist seal overlaps the cuff when the hand waves.
+      freeWrist=group(elbow,374,335,24);
+      hull(freeWrist,[[307,375,379,.48],[309,370,385,.65],[312,363,390,.88],
+        [316,362,398,1],[320,363,402,1],[323,364,404,.95],[328,365,400,.94],
+        [333,367,396,.87],[337,370,391,.69],[340,374,385,.44],[342,378,382,.2]],28,10,alloy);
+      hull(freeWrist,[[305,360,363,.2],[307,359,366,.64],[311,359,368,.96],
+        [315,359,370,1],[319,361,373,.97],[324,362,378,.86],[329,364,378,.7],
+        [333,368,376,.42]],34,6,alloy);
+      const fingers=[
+        [[288,387,394,.32],[290,384,397,.74],[293,382,396,.98],[297,380,393,1],
+         [302,378,390,1],[307,375,386,.96],[310,373,383,.78],[313,371,379,.3]],
+        [[292,398,402,.4],[294,395,404,.77],[297,392,405,1],[301,390,402,1],
+         [306,387,398,1],[311,384,395,.95],[315,381,391,.68],[317,382,388,.34]],
+        [[299,405,409,.4],[301,402,412,.79],[304,399,412,1],[308,396,410,1],
+         [314,392,404,1],[318,390,400,.85],[321,391,396,.4]],
+        [[308,412,416,.28],[310,408,418,.74],[313,404,418,1],[316,401,415,1],
+         [320,398,409,.89],[323,396,404,.66],[325,397,401,.28]],
+      ];
+      for(const rows of fingers){
+        const [baseY,leftX,rightX]=rows.at(-1);
+        const finger=group(freeWrist,(leftX+rightX)/2,baseY,30);
+        hull(finger,rows,30,5,alloy);
+        fingerJoints.push(finger);
       }
-      function phalanx(parent,from,to,width,mat){
-        const start=new T.Vector3(...from),end=new T.Vector3(...to),axis=end.clone().sub(start);
-        const finger=mesh(parent,sphere,mat);finger.position.copy(start).lerp(end,.5);
-        finger.scale.set(width,axis.length()*.58,width*.87);
-        finger.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),axis.normalize());
-      }
-      pad(palm,dark,0,-.015,0,.09,.075,.085);
-      pad(palm,alloy,0,-.127,0,.142,.156,.092);
-      pad(palm,bronze,0,-.122,.076,.112,.105,.027);
-      pad(palm,gold,0,-.12,.099,.078,.075,.016);
-      pad(palm,dark,0,-.13,-.075,.105,.107,.021);
-      const digits=[[-.089,.157],[-.029,.182],[.034,.169],[.092,.128]];
-      for(const [x,len] of digits){
-        const y=-.219+Math.abs(x)*.23,z=-.005;
-        const first=[x,y,z],knuckle=[x*1.12,y-len*.55,z-.025],tip=[x*1.11,y-len,z-.083];
-        pad(palm,dark,x,y,z,.034,.043,.039);
-        phalanx(palm,first,knuckle,.035,alloy);
-        pad(palm,dark,...knuckle,.03,.033,.03);
-        const hinge=new T.Group();palm.add(hinge);hinge.position.set(...knuckle);
-        const relative=tip.map((val,i)=>val-knuckle[i]);
-        phalanx(hinge,[0,0,0],relative,.034,alloy);fingerJoints.push(hinge);
-      }
-      phalanx(palm,[-.102,-.079,-.015],[-.177,-.156,-.026],.049,alloy);
-      pad(palm,dark,-.172,-.157,-.029,.039,.041,.041);
-      phalanx(palm,[-.177,-.156,-.026],[-.163,-.219,-.092],.038,alloy);
     }
   }
   // Lathed staff. Cap-to-cap distance and grip position are measured on the source image.

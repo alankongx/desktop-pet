@@ -6,23 +6,6 @@
   let action='', start=0, duration=0, mood='default', status='idle';
   const durations=Object.fromEntries(dashengActions.map(action=>[action.id,action.seconds]));
   const sin=Math.sin, pi=Math.PI;
-  const V=THREE.Vector3,Q=THREE.Quaternion,E=THREE.Euler;
-  const zAxis=new V(0,0,1),upperIdle=new Q(),lowerIdle=new Q(),wristIdle=new Q();
-  function prepareIdleHand(rig){
-    const free=rig.arms[1],holding=rig.arms[0];
-    upperIdle.setFromEuler(new E(-.34,-.50,0,'ZXY'));
-    lowerIdle.setFromEuler(new E(-.20,-.12,-.30,'ZXY'));
-    const reach=rig.freeWrist.position.clone().applyQuaternion(lowerIdle)
-      .add(free.elbow.position).applyQuaternion(upperIdle);
-    const gripY=holding.a.position.y+holding.elbow.position.y+rig.staff.position.y;
-    const rise=(gripY-free.a.position.y)/Math.hypot(reach.x,reach.y);
-    const roll=Math.asin(THREE.MathUtils.clamp(rise,-1,1))-Math.atan2(reach.y,reach.x);
-    upperIdle.premultiply(new Q().setFromAxisAngle(zAxis,roll));
-    // Align the palm independently of the arm: fingers toward screen left, palm toward +Z.
-    const palm=new Q().setFromEuler(new E(0,pi,-pi/2,'ZYX'));
-    wristIdle.copy(upperIdle).multiply(lowerIdle).invert().multiply(palm);
-  }
-
   const staffRest=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),.325);
   function resize(){
     if(!renderer)return;
@@ -103,22 +86,19 @@
       thinking?.24+.07*sin(t*2):.031*sin(t*.9),nap?-.15:thinking?.13:angry?.045*sin(t*17):.007*sin(t*1.7));
     const [left,right]=a.arms;
     left.a.rotation.set(0,0,0);left.elbow.rotation.set(0,0,0);
-    right.a.rotation.set(-.085,-.11,-.025);right.elbow.rotation.set(-.23,0,-.40);
-    a.freeWrist.rotation.order='ZXY';
-    a.freeWrist.rotation.set(-.28+.03*sin(t*1.4),.37+.045*sin(t*1.1),.24);
-    let openPalm=0;
-
-    if(action==='wave'||action==='happy'||thinking){
-      const v=thinking&&!action?.65:weight;
-      openPalm=v;
-      right.a.rotation.z+=v*(1.09+.09*sin(elapsed*8));
-      right.elbow.rotation.z+=v*1.29;
-      a.freeWrist.rotation.z+=v*(.82+.24*sin(elapsed*10));
-      a.freeWrist.rotation.y+=v*2.62;
-      right.elbow.rotation.x+=.35*v;
+    // The free arm's zero rotations register its wrist and fingertips to the portrait.
+    right.a.rotation.set(0,0,0);right.elbow.rotation.set(0,0,0);
+    a.freeWrist.rotation.set(0,0,0);
+    const greeting=action==='wave'||action==='happy';
+    const raise=greeting?weight:thinking&&!action?.35:0;
+    if(raise){
+      right.a.rotation.z=.24*raise;
+      right.elbow.rotation.set(.12*raise,0,.48*raise);
+      a.freeWrist.rotation.z=(.06+.27*sin(t*10))*raise;
     }
-    a.fingerJoints.forEach((finger,i)=>{finger.rotation.x=(.35+i*.10)*(1-openPalm)-.46*openPalm;});
-    if(busy) {right.elbow.rotation.x-=.38+.30*sin(t*4);right.a.rotation.z+=.14*sin(t*4);}
+    const curl=nap?.27:angry?.36:raise?.12*(1+sin(t*10)):0;
+    a.fingerJoints.forEach((finger,i)=>{finger.rotation.x=curl*(.68+i*.10);});
+    if(busy){right.elbow.rotation.x=.05*sin(t*4);right.a.rotation.z=.015*sin(t*4);}
     // Counter-rotate the wrist so the staff points upright in its resting pose.
     if(action==='staff'||action==='angry'){
       left.a.rotation.x-=weight*.49;
@@ -131,13 +111,6 @@
       left.a.rotation.y+=.70*whirl;left.elbow.rotation.y+=.14*whirl;
       a.head.rotation.y-=.045*power;
       right.a.rotation.z+=.17*power;
-    }
-    const restWeight=nap||thinking?0:1-weight;
-    if(restWeight>0){
-      right.a.quaternion.slerp(upperIdle,restWeight);
-      right.elbow.quaternion.slerp(lowerIdle,restWeight);
-      a.freeWrist.quaternion.slerp(wristIdle,restWeight);
-      for(const finger of a.fingerJoints)finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,-.55,restWeight);
     }
     a.staff.quaternion.copy(left.a.quaternion).multiply(left.elbow.quaternion).invert().multiply(staffRest);
     if(action==='staff')a.staff.rotateX(2*pi*(progress-sin(2*pi*progress)/(2*pi)));
@@ -192,7 +165,7 @@
     ctx.fillStyle=grad;ctx.fillRect(0,0,256,128);ctx.fillStyle='#ffffff';
     ctx.fillRect(22,18,33,51);ctx.fillRect(145,25,40,30);ctx.fillRect(215,33,8,52);
     const env=new T.CanvasTexture(envCanvas);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;scene.environment=env;
-    actor=buildDasheng(T,imgs);prepareIdleHand(actor);scene.add(actor.root,actor.cloud);frame();
+    actor=buildDasheng(T,imgs);scene.add(actor.root,actor.cloud);frame();
   }
   new ResizeObserver(resize).observe(stage);
   document.addEventListener('visibilitychange',frame);

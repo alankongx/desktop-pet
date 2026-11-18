@@ -22,7 +22,7 @@ body.size-small {
   --win-w: 84px;  --win-h: 156px;
   --pet-w: 84px;  --pet-h: 96px;
   --bubble-font: 10px;
-  --bubble-pad-y: 2px; --bubble-pad-x: 7px;
+  --bubble-pad-y: 2px; --bubble-pad-x: 3px;
   --bubble-max-w: 80px;
   --bubble-max-h: 60px;
 }
@@ -219,7 +219,7 @@ html, body:active { cursor: grabbing; }
 #pet-root.use-three.three-ready #dasheng { display:none; }
 #pet-root.use-three.three-ready #pet-stage { animation:none; }
 #dasheng-3d.rage { filter:sepia(.58) saturate(2.6) hue-rotate(326deg); }
-#codex-state:not([hidden]) { display:block; color:#6e6352; font:600 max(8px, .73em)/1.35 -apple-system,sans-serif; letter-spacing:0; }
+#codex-state:not([hidden]) { display:block; color:#6e6352; font:600 max(8px, .73em)/1.35 "PingFang SC","Microsoft YaHei",sans-serif; white-space:nowrap; letter-spacing:0; }
 #codex-state[data-state="working"] { color:#256152; }
 #codex-state[data-state="failed"],#codex-state[data-state="input"] { color:#983e24; }
 

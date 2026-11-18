@@ -111,20 +111,33 @@
   }
 
   const phrases = {
-    greeting: ['俺老孙来也！','老板，俺想你了~','今天也来助阵！','七十二变随叫随到','俺老孙护你周全'],
-    happy:    ['嘿嘿嘿！舒坦！','打完怪了，给我肉！','筋斗云已待命','老板最棒！','一个筋斗十万八千里~'],
-    thinking: ['佛祖让俺想想…','容俺掐指一算…','嗯？此中有蹊跷','待俺回忆九九八十一难…','妖怪何在！'],
-    angry:    ['呔！休得放肆！','尔等何方妖孽','俺老孙可不是好惹的','吃俺一棒！','老板被欺负了？'],
-    sleeping: ['俺老孙困了…','Zzz…别吵…','梦中取经中…','等我打个盹儿'],
-    work:     ['干活儿干活儿~','任务多？俺老孙单挑！','今天也要双休哦','搬砖顺利！'],
-    idle:     ['盯着你不许偷懒！','老板来杯咖啡？','俺的紧箍咒是不是紧了','嘿，吃俺一棒！','耳朵好听声音~','老板今天很帅！'],
+    idle: ['俺在桌角歇歇脚。','花果山的桃，该熟了吧？','这桌角，正好搁俺的棒。'],
+    thinking: ['咦，桃核能种出蟠桃吗？','让俺挠挠头，想一想。'],
+    calm: ['笑够啦，歇口气。','好，俺坐稳了。'],
+    hide: ['猜猜俺藏哪儿了？','待俺使个隐身法！'],
+    back: ['嘿！俺在这儿呢。','瞧，俺又现身啦！'],
   };
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
   const statusLabels = {working:'工作中', waiting:'等待中', input:'等你确认', done:'已完成',
     interrupted:'已中断', failed:'出错了', idle:'待机', offline:'未连接'};
-  const statusSpeech = {working:'俺帮你盯着呢', waiting:'稍等片刻…',input:'老板，到你啦！',
-    done:'收工喽！',interrupted:'先歇一会儿',failed:'老板，来瞧瞧！'};
+  const statusSpeech = {
+    working:['还在忙，俺守着呢。','这活儿还在做，俺陪你。'],
+    waiting:['还得等一会儿，俺陪你。','咱们在这儿候一候。'],
+    input:['请回 Codex 确认这一步。','这一步，等你回 Codex 确认。'],
+    done:['这一轮好啦，去瞧瞧结果！','这一轮结束啦，看看成果吧。'],
+    interrupted:['这轮停下了，回头再续。','先停在这儿，回头再来。'],
+    failed:['这步出了岔子，去看看吧。','这轮没跑通，回去瞧瞧。'],
+  };
+  // Each scene remembers its next line. Restoring a status keeps the same wording.
+  const linePositions=new Map();
+  function nextLine(lines){
+    const index=linePositions.get(lines)||0;
+    linePositions.set(lines,(index+1)%lines.length);
+    return lines[index];
+  }
+  let cloudStyle='depart', currentStatusLine='';
+  function restoreSpeech(){
+    setSpeech(currentStatusLine||nextLine(phrases.idle));
+  }
   let autoEnabled=true, in3d=true, nextActionIndex=0, autoPlaying=false;
   let autoTimer, speechRestore;
   const attentionStates=['input','waiting','failed','done','interrupted'];
@@ -143,7 +156,7 @@
   function stopAutoAction(){
     if(!autoPlaying)return;
     autoPlaying=false;clearTimeout(speechRestore);window.dasheng3d?.stop();
-    setSpeech(statusSpeech[codexState]||'俺老孙在此！');
+    restoreSpeech();
   }
   function playAction(id,automatic=false) {
     const item=dashengActions.find(action=>action.id===id);if(!item)return;
@@ -151,15 +164,19 @@
     clearTimeout(speechRestore);
     autoPlaying=automatic;
     if(!automatic){manualUntil=Date.now()+duration;scheduleActions();}
-    setMood(item.mood,duration);setSpeech(item.speech);window.dasheng3d?.play(id);
+    const lines=id==='cloud' && cloudStyle==='glide'?item.glideSpeech:item.speech;
+    setMood(item.mood,duration);setSpeech(nextLine(lines));window.dasheng3d?.play(id);
     speechRestore=setTimeout(()=>{
       autoPlaying=false;
-      if(statusSpeech[codexState]||automatic)setSpeech(statusSpeech[codexState]||pick(phrases.idle));
+      restoreSpeech();
     },duration);
   }
   document.addEventListener('visibilitychange',scheduleActions);
   if(window.petAPI) {
-    window.petAPI.onCloudStyle(value=>window.dasheng3d?.setCloudStyle(value));
+    window.petAPI.onCloudStyle(value=>{
+      cloudStyle=value==='glide'?'glide':'depart';
+      window.dasheng3d?.setCloudStyle(cloudStyle);
+    });
     window.petAPI.onAction(id=>playAction(id));
     window.petAPI.onAutoActions(v=>{autoEnabled=v;if(!v)stopAutoAction();scheduleActions();});
     window.petAPI.onMode(v=>{
@@ -168,15 +185,18 @@
     });
     window.petAPI.onCodex(state=>{
       codexState=state;
+      currentStatusLine=statusSpeech[state]?nextLine(statusSpeech[state]):'';
       const badge=document.getElementById('codex-state');
       badge.hidden=!statusLabels[state];badge.dataset.state=state;
       badge.textContent=badge.hidden?'':'Codex · '+statusLabels[state];
       window.dasheng3d?.setStatus(state);
       if(Date.now()<manualUntil && !attentionStates.includes(state))return;
-      if(attentionStates.includes(state)){manualUntil=0;clearTimeout(speechRestore);}
+      if(attentionStates.includes(state)){
+        manualUntil=0;clearTimeout(speechRestore);window.dasheng3d?.stop();
+      }
       if(autoPlaying && !attentionStates.includes(state))return;
       stopAutoAction();
-      setSpeech(statusSpeech[state]||'俺老孙在此！');
+      restoreSpeech();
       if(state==='done'){setMood('happy',4500);window.dasheng3d?.play('wave');}
       else if(state==='failed'){setMood('angry',4000);window.dasheng3d?.play('angry');}
       else if(state==='input'){setMood('thinking',4000);window.dasheng3d?.play('wave');}
@@ -203,19 +223,20 @@
     clearTimeout(clickTimer);
     clickTimer = setTimeout(() => {
       if (clickCount === 1) {
-        window.dasheng3d?.play('wave');
-        const grp = ['greeting', 'happy', 'thinking', 'work'][Math.floor(Math.random() * 4)];
-        setSpeech(pick(phrases[grp]));  // 常驻，不自动隐藏
-        if (grp === 'happy') setMood('happy', 2800);
-        else if (grp === 'thinking') setMood('thinking', 2800);
+        if(attentionStates.includes(codexState)){
+          restoreSpeech();
+          window.dasheng3d?.play('wave');
+        }else{
+          playAction('wave');
+        }
       } else if (clickCount === 2) {
         if (currentMood === 'happy') {
-          setMood('default');
-          setSpeech('正襟危坐！');
+          clearTimeout(speechRestore);window.dasheng3d?.stop();
+          setMood('default');setSpeech(nextLine(phrases.calm));
+          manualUntil=Date.now()+2500;
+          speechRestore=setTimeout(restoreSpeech,2500);
         } else {
-          setMood('happy', 3500);
-          setSpeech('好嗨哟！');
-          window.dasheng3d?.play('happy');
+          playAction('happy');
         }
       }
       clickCount = 0;
@@ -224,13 +245,17 @@
 
   // 三击：藏身 + 5秒回归
   function doHideAndReturn() {
-    setSpeech('俺老孙去也！');
+    clearTimeout(speechRestore);
+    manualUntil=Date.now()+7500;
+    setSpeech(nextLine(phrases.hide));
     root.classList.add('hidden-pet');
     setMood('sleeping');
     setTimeout(() => {
       root.classList.remove('hidden-pet');
+      if(attentionStates.includes(codexState)){restoreSpeech();return;}
       setMood('happy', 2500);
-      setSpeech('俺老孙又回来了！');
+      setSpeech(nextLine(phrases.back));
+      speechRestore=setTimeout(restoreSpeech,2500);
     }, 5000);
   }
 
@@ -263,7 +288,7 @@
   function onDragStart(e) {
     // 仅响应主键（左键）
     if (e.button !== 0) return;
-    stopAutoAction();clearTimeout(speechRestore);scheduleActions();
+    stopAutoAction();scheduleActions();
     isDragging = true;
     didDrag = false;
     dragStartX = e.screenX;
@@ -280,15 +305,14 @@
     const next = 40000 + Math.random() * 40000;
     setTimeout(() => {
       if ((autoEnabled && in3d && root.classList.contains('three-ready')) || autoPlaying || Date.now() < manualUntil || !['idle','off','offline'].includes(codexState)) { scheduleIdle(); return; }
-      const actions = [
-        () => { setMood('thinking', 3500); setSpeech(pick(phrases.thinking)); },
-        () => { setMood('happy', 3500);    setSpeech(pick(phrases.happy)); },
-        () => { window.dasheng3d?.play('turn'); setSpeech(pick(phrases.idle)); },
-        () => { setMood('angry', 1500);   setSpeech(pick(phrases.angry)); },
-        () => { setMood('sleeping', 3000); setSpeech(pick(phrases.sleeping)); },
-      ];
-      scheduleActions();
-      actions[Math.floor(Math.random() * actions.length)]();
+      const options=['thinking','happy','turn','angry','nap'];
+      const choice=options[Math.floor(Math.random()*options.length)];
+      if(choice==='thinking'){
+        setMood('thinking',3500);setSpeech(nextLine(phrases.thinking));
+        clearTimeout(speechRestore);speechRestore=setTimeout(restoreSpeech,3500);
+      }else{
+        playAction(choice);
+      }
       scheduleIdle();
     }, next);
   }
@@ -296,7 +320,7 @@
   scheduleActions();
 
   // ========== 初始欢迎 ==========
-  // 气泡已默认显示"俺老孙在此！"，无需额外 trigger
+  // 欢迎词已由页面中的气泡显示。
   // 仅做一次 bounce 吸引注意
   setTimeout(() => {
     root.classList.add('attention');
