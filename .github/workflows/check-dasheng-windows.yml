@@ -1,0 +1,42 @@
+name: Check Dasheng Windows installer
+on:
+  workflow_dispatch:
+    inputs:
+      sha256:
+        description: SHA-256 of the published 2.2.0 installer
+        required: true
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and test the release executable
+        shell: pwsh
+        env:
+          EXPECTED: ${{ inputs.sha256 }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $env:RUNNER_TEMP 'DashengPet-Setup.exe'
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/dasheng-v2.2.0/DashengPet-2.2.0-Windows-x64-Setup.exe"
+          Invoke-WebRequest $url -OutFile $exe
+          if ((Get-FileHash $exe).Hash -ne $env:EXPECTED) { throw 'Incorrect checksum' }
+          $install = Start-Process $exe '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Installer returned $($install.ExitCode)" }
+          $deps = Join-Path $env:RUNNER_TEMP 'dasheng-qa'
+          npm install --prefix $deps --no-audit --no-fund playwright-core@1.58.2
+          if ($LASTEXITCODE) { throw 'Test dependency installation failed' }
+          $env:NODE_PATH = Join-Path $deps 'node_modules'
+          $env:CODEX_HOME = Join-Path $env:RUNNER_TEMP 'dasheng-codex-fixture'
+          node pets/dasheng/windows/smoke.cjs
+          if ($LASTEXITCODE) { throw 'Installed app checks failed' }
+          $folder = Join-Path $env:LOCALAPPDATA 'Programs\DashengPet'
+          $uninstall = Start-Process (Join-Path $folder 'Uninstall.exe') '/S' -Wait -PassThru
+          if ($uninstall.ExitCode) { throw 'Uninstaller failed' }
+          for ($i=0; $i -lt 40 -and (Test-Path "$folder\DashengPet.exe"); $i++) { Start-Sleep -Milliseconds 250 }
+          if (Test-Path "$folder\DashengPet.exe") { throw 'Uninstall left the application behind' }

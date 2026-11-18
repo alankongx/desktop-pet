@@ -11,17 +11,23 @@
   <div id="pet-root">
     <!-- 悟空话术气泡：默认可见，老板任何时候都能看到 -->
     <div id="speech-bubble">
+      <span id="codex-state" hidden aria-live="polite"></span>
       <span id="speech-text">俺老孙在此！</span>
     </div>
 
     <!-- 大圣喵形象（自带 LED 屏表情，原图） -->
     <div id="pet-stage">
       <div id="pet-body">
+        <canvas id="dasheng-3d" aria-label="3D 大圣喵"></canvas>
         <img id="dasheng" src="../assets/dasheng.png" alt="大圣喵" draggable="false">
       </div>
     </div>
   </div>
 
+  <script src="vendor/three.min.js"></script>
+  <script src="model.js"></script>
+  <script src="../actions.js"></script>
+  <script src="pet3d.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

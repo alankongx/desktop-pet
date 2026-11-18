@@ -36,6 +36,10 @@
     if (!p) return;
     // 1) 切换 CSS class（缩放宠物图 + 气泡 + 窗口）
     document.body.className = 'size-' + name;
+    if(window.petAPI) {
+      document.documentElement.classList.add('native-field');
+      document.body.style.setProperty('--field-pad',Math.ceil(p.petW*.68)+'px');
+    }
     // 2) 通知主进程改窗口尺寸（保右下角）
     if (opts.resize !== false && window.petAPI) {
       window.petAPI.setSize(name, p.winW, p.winH);
@@ -65,6 +69,8 @@
   };
 
   let currentMood = null;
+  let codexState = 'off';
+  let manualUntil = 0;
   let moodTimer = null;
 
   function setMood(name, durationMs = 0) {
@@ -76,12 +82,14 @@
     } else {
       currentMood = 'default';
     }
+    window.dasheng3d?.setMood(name);
     setFace(name === 'happy');   // 开怀换脸，其余表情用原图 + CSS 滤镜
     clearTimeout(moodTimer);
     if (durationMs > 0) {
       moodTimer = setTimeout(() => {
         Object.values(moods).forEach(c => { if (c) root.classList.remove(c); });
         currentMood = 'default';
+        window.dasheng3d?.setMood('default');
         setFace(false);   // 恢复沉静表情
       }, durationMs);
     }
@@ -113,6 +121,67 @@
   };
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+  const statusLabels = {working:'工作中', waiting:'等待中', input:'等你确认', done:'已完成',
+    interrupted:'已中断', failed:'出错了', idle:'待机', offline:'未连接'};
+  const statusSpeech = {working:'俺帮你盯着呢', waiting:'稍等片刻…',input:'老板，到你啦！',
+    done:'收工喽！',interrupted:'先歇一会儿',failed:'老板，来瞧瞧！'};
+  let autoEnabled=true, in3d=true, nextActionIndex=0, autoPlaying=false;
+  let autoTimer, speechRestore;
+  const attentionStates=['input','waiting','failed','done','interrupted'];
+  function scheduleActions(){
+    clearTimeout(autoTimer);
+    if(!autoEnabled || !in3d || document.hidden)return;
+    autoTimer=setTimeout(()=>{
+      if(Date.now()>=manualUntil && !isDragging && !root.classList.contains('hidden-pet')
+        && root.classList.contains('three-ready') && !attentionStates.includes(codexState)){
+        playAction(dashengActions[nextActionIndex].id,true);
+        nextActionIndex=(nextActionIndex+1)%dashengActions.length;
+      }
+      scheduleActions();
+    },9000);
+  }
+  function stopAutoAction(){
+    if(!autoPlaying)return;
+    autoPlaying=false;clearTimeout(speechRestore);window.dasheng3d?.stop();
+    setSpeech(statusSpeech[codexState]||'俺老孙在此！');
+  }
+  function playAction(id,automatic=false) {
+    const item=dashengActions.find(action=>action.id===id);if(!item)return;
+    const duration=item.seconds*1000;
+    clearTimeout(speechRestore);
+    autoPlaying=automatic;
+    if(!automatic){manualUntil=Date.now()+duration;scheduleActions();}
+    setMood(item.mood,duration);setSpeech(item.speech);window.dasheng3d?.play(id);
+    speechRestore=setTimeout(()=>{
+      autoPlaying=false;
+      if(statusSpeech[codexState]||automatic)setSpeech(statusSpeech[codexState]||pick(phrases.idle));
+    },duration);
+  }
+  document.addEventListener('visibilitychange',scheduleActions);
+  if(window.petAPI) {
+    window.petAPI.onAction(id=>playAction(id));
+    window.petAPI.onAutoActions(v=>{autoEnabled=v;if(!v)stopAutoAction();scheduleActions();});
+    window.petAPI.onMode(v=>{
+      in3d=v==='3d';if(!in3d)stopAutoAction();
+      window.dasheng3d?.enable(in3d);scheduleActions();
+    });
+    window.petAPI.onCodex(state=>{
+      codexState=state;
+      const badge=document.getElementById('codex-state');
+      badge.hidden=!statusLabels[state];badge.dataset.state=state;
+      badge.textContent=badge.hidden?'':'Codex · '+statusLabels[state];
+      window.dasheng3d?.setStatus(state);
+      if(Date.now()<manualUntil && !attentionStates.includes(state))return;
+      if(attentionStates.includes(state)){manualUntil=0;clearTimeout(speechRestore);}
+      if(autoPlaying && !attentionStates.includes(state))return;
+      stopAutoAction();
+      setSpeech(statusSpeech[state]||'俺老孙在此！');
+      if(state==='done'){setMood('happy',4500);window.dasheng3d?.play('wave');}
+      else if(state==='failed'){setMood('angry',4000);window.dasheng3d?.play('angry');}
+      else if(state==='input'){setMood('thinking',4000);window.dasheng3d?.play('wave');}
+      else setMood('default');
+    });
+  }
   // ========== 单击 / 双击 / 三击 ==========
   let clickCount = 0;
   let clickTimer = null;
@@ -133,6 +202,7 @@
     clearTimeout(clickTimer);
     clickTimer = setTimeout(() => {
       if (clickCount === 1) {
+        window.dasheng3d?.play('wave');
         const grp = ['greeting', 'happy', 'thinking', 'work'][Math.floor(Math.random() * 4)];
         setSpeech(pick(phrases[grp]));  // 常驻，不自动隐藏
         if (grp === 'happy') setMood('happy', 2800);
@@ -144,6 +214,7 @@
         } else {
           setMood('happy', 3500);
           setSpeech('好嗨哟！');
+          window.dasheng3d?.play('happy');
         }
       }
       clickCount = 0;
@@ -183,6 +254,7 @@
   function onDragEnd() {
     if (!isDragging) return;
     isDragging = false;
+    scheduleActions();
     root.classList.remove('dragging');
     // 100ms 后清除 didDrag，确保 click 事件已经处理完
     setTimeout(() => { didDrag = false; }, 100);
@@ -190,6 +262,7 @@
   function onDragStart(e) {
     // 仅响应主键（左键）
     if (e.button !== 0) return;
+    stopAutoAction();clearTimeout(speechRestore);scheduleActions();
     isDragging = true;
     didDrag = false;
     dragStartX = e.screenX;
@@ -205,18 +278,21 @@
   function scheduleIdle() {
     const next = 40000 + Math.random() * 40000;
     setTimeout(() => {
+      if ((autoEnabled && in3d && root.classList.contains('three-ready')) || autoPlaying || Date.now() < manualUntil || !['idle','off','offline'].includes(codexState)) { scheduleIdle(); return; }
       const actions = [
         () => { setMood('thinking', 3500); setSpeech(pick(phrases.thinking)); },
         () => { setMood('happy', 3500);    setSpeech(pick(phrases.happy)); },
-        () => {                              setSpeech(pick(phrases.idle)); },
+        () => { window.dasheng3d?.play('turn'); setSpeech(pick(phrases.idle)); },
         () => { setMood('angry', 1500);   setSpeech(pick(phrases.angry)); },
         () => { setMood('sleeping', 3000); setSpeech(pick(phrases.sleeping)); },
       ];
+      scheduleActions();
       actions[Math.floor(Math.random() * actions.length)]();
       scheduleIdle();
     }, next);
   }
   setTimeout(scheduleIdle, 30000);
+  scheduleActions();
 
   // ========== 初始欢迎 ==========
   // 气泡已默认显示"俺老孙在此！"，无需额外 trigger

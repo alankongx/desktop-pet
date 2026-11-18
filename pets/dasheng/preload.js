@@ -4,6 +4,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('petAPI', {
+  onAutoActions: cb => ipcRenderer.on('auto-actions', (_,enabled) => cb(enabled)),
+  onAction: cb => ipcRenderer.on('pet-action', (_,id) => cb(id)),
+  onMode: cb => ipcRenderer.on('pet-mode', (_,mode) => cb(mode)),
+  onCodex: cb => ipcRenderer.on('codex-status', (_,state) => cb(state)),
   // 拖窗口：调用主进程按 (dx, dy) 移动窗口
   moveBy: (dx, dy) => ipcRenderer.send('drag-move', { dx, dy }),
 

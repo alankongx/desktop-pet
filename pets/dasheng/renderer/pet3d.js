@@ -1,0 +1,123 @@
+(() => {
+  const canvas=document.querySelector('#dasheng-3d'), root=document.querySelector('#pet-root');
+  const stage=document.querySelector('#pet-stage');
+  let active=true, failed=false, actor, renderer, scene, camera, previous=0, timer=0;
+  let action='', start=0, duration=0, mood='default', status='idle';
+  const durations=Object.fromEntries(dashengActions.map(action=>[action.id,action.seconds]));
+  const sin=Math.sin, pi=Math.PI;
+  const staffRest=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),.325);
+  function resize(){
+    if(!renderer)return;
+    const w=stage.clientWidth,h=stage.clientHeight;
+    if(!w||!h)return;
+    // Match the original square PNG's contain/bottom alignment. Extra transparent
+    // pixels expose more of the world at exactly the same orthographic scale.
+    const unit=4.8/w, ext=window.petAPI?Math.ceil(w*.68):0, foot=window.petAPI?Math.ceil(w*.57):0;
+    const sky=window.petAPI?Math.ceil(w*.12):0;canvas.style.top=(-sky)+'px';
+    canvas.style.width=(w+ext*2)+'px';canvas.style.height=(h+foot+sky)+'px';
+    canvas.style.left=(-ext)+'px';
+    renderer.setSize(w+ext*2,h+foot+sky,false);
+    camera.left=-(w/2+ext)*unit;camera.right=-camera.left;
+    camera.top=(h+sky)*unit-.025;camera.bottom=-foot*unit-.025;camera.updateProjectionMatrix();
+  }
+  function draw(now) {
+    if(!active||failed||!actor)return;
+    const t=now/1000, elapsed=t-start;
+    if(elapsed>=duration)action='';
+    const progress=action?elapsed/duration:0;
+    const weight=action?Math.min(1,Math.max(0,elapsed*5),Math.max(0,(duration-elapsed)*5)):0;
+    const ease=x=>{x=Math.min(1,Math.max(0,x));return x*x*(3-2*x);};
+    const special=action==='grow'||action==='vortex';
+    const power=special?ease(progress/.21)*ease((1-progress)/.20):0;
+    const whirl=action==='vortex'?ease((progress-.16)/.15)*ease((.88-progress)/.16):0;
+    const a=actor, angry=mood==='angry', nap=action==='nap'||mood==='sleeping',
+      busy=status==='working'&&!action, thinking=mood==='thinking'||status==='waiting'&&!action;
+    a.root.rotation.y=-.009+.020*sin(t*.78)+(action==='turn'?2*pi*(progress-sin(2*pi*progress)/(2*pi)):0);
+    a.root.position.y=.007*sin(t*2.5)+(action==='happy'?.115*Math.abs(sin(elapsed*7))*weight:0);
+    a.body.rotation.set(nap?.13:busy?.055+.055*sin(t*4):0,angry?.07*sin(t*17):0,.006*sin(t*2));
+    a.head.rotation.set(nap?.29+.055*sin(t*2):busy?.09+.065*sin(t*4):.013*sin(t*1.9),
+      thinking?.24+.07*sin(t*2):.031*sin(t*.9),nap?-.15:thinking?.13:angry?.045*sin(t*17):.007*sin(t*1.7));
+    const [left,right]=a.arms;
+    left.a.rotation.set(0,0,0);left.elbow.rotation.set(0,0,0);
+    right.a.rotation.set(0,0,0);right.elbow.rotation.set(0,0,0);
+    if(action==='wave'||action==='happy'||thinking){
+      const v=thinking&&!action?.65:weight;
+      right.a.rotation.z+=v*(.75+.13*sin(elapsed*9));
+      right.elbow.rotation.z+=v*(.36+.43*sin(elapsed*12));
+      right.elbow.rotation.x+=.35*v;
+    }
+    if(busy) {right.elbow.rotation.x-=.38+.30*sin(t*4);right.a.rotation.z+=.14*sin(t*4);}
+    // Counter-rotate the wrist so the staff points upright in its resting pose.
+    if(action==='staff'||action==='angry'){
+      left.a.rotation.x-=weight*.49;
+      left.a.rotation.z-=weight*(.20+.13*sin(elapsed*7));
+      a.body.rotation.y=weight*.22*sin(elapsed*4);
+    } else {a.body.rotation.y=angry?.07*sin(t*17):0;}
+    if(special){
+      left.a.rotation.x-=.23*power;left.a.rotation.z-=.09*power;
+      left.elbow.rotation.x-=.10*power;
+      left.a.rotation.y+=.70*whirl;left.elbow.rotation.y+=.14*whirl;
+      a.head.rotation.y-=.045*power;
+      right.a.rotation.z+=.17*power;
+    }
+    a.staff.quaternion.copy(left.a.quaternion).multiply(left.elbow.quaternion).invert().multiply(staffRest);
+    if(action==='staff')a.staff.rotateX(2*pi*(progress-sin(2*pi*progress)/(2*pi)));
+    if(action==='angry')a.staff.rotateX(weight*.4*sin(elapsed*8));
+    a.staff.scale.set(1+power*1.47,1+power*1.236,1+power*1.47);
+    if(action==='vortex'){
+      const turns=ease((progress-.16)/.72);
+      a.staff.rotateZ(-6*pi*turns);
+    }
+    a.wind.visible=whirl>.01;
+    // Keep the trail circular as the staff grows wider and longer.
+    a.wind.scale.x=a.staff.scale.y/a.staff.scale.x;
+    if(a.wind.visible)for(const {material,strength} of a.windMaterials)material.opacity=whirl*strength;
+    for(const [i,f] of a.feathers.entries())f.rotation.z=(i?1:-1)*(.025*sin(t*2.4)+(action==='turn'?weight*.11:0));
+    a.cape.rotation.x=-.04+.045*sin(t*2)+(action==='turn'?weight*.29:0);
+    a.legs.forEach((leg,i)=>{leg.rotation.x=action==='turn'?weight*.24*sin(elapsed*9+i*pi):0;});
+    const texture=nap?a.sleepFace:mood==='happy'||action==='happy'?a.faces[1]:a.faces[0];
+    a.visor.map=texture;a.visor.color.setHex(angry?0xff624c:0xffffff);
+    canvas.classList.toggle('rage',angry);renderer.render(scene,camera);
+    if(!root.classList.contains('three-ready'))root.classList.add('three-ready');
+  }
+  function frame(){
+    cancelAnimationFrame(timer);clearTimeout(previous);
+    if(!actor||!active||failed||document.hidden)return;
+    draw(performance.now());
+    previous=setTimeout(()=>{timer=requestAnimationFrame(frame);},action||status==='working'?34:78);
+  }
+  function enable(value){
+    active=value;root.classList.toggle('use-three',active);if(active)resize();frame();
+  }
+  function fallback(){failed=true;root.classList.remove('three-ready');clearTimeout(previous);cancelAnimationFrame(timer);}
+  async function init(){
+    const imgs=await Promise.all(['dasheng.png','dasheng-happy.png'].map(async name=>{
+      const img=new Image();img.src='../assets/'+name;await img.decode();return img;
+    }));
+    const T=window.THREE;
+    renderer=new T.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setClearColor(0,0);
+    scene=new T.Scene(); camera=new T.OrthographicCamera(-2,2,2.4,-2.4,.1,40);
+    camera.position.set(0,0,12);camera.lookAt(0,0,0);resize();
+    scene.add(new T.HemisphereLight(0xfff5e2,0xbd9890,1.63));
+    for(const [x,y,z,color,intensity] of [[-4,7,5,0xffebcf,2.35],[4,3,3,0xe3edff,1.55],[1,5,-4,0xffcf91,2.8]]){
+      const light=new T.DirectionalLight(color,intensity);light.position.set(x,y,z);scene.add(light);
+    }
+    // Studio panels supply soft highlights when the character turns.
+    const envCanvas=document.createElement('canvas');envCanvas.width=256;envCanvas.height=128;
+    const ctx=envCanvas.getContext('2d');const grad=ctx.createLinearGradient(0,0,0,128);
+    grad.addColorStop(0,'#c7c2b9');grad.addColorStop(.49,'#645b52');grad.addColorStop(.55,'#332c2c');grad.addColorStop(1,'#927c65');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,256,128);ctx.fillStyle='#ffffff';
+    ctx.fillRect(22,18,33,51);ctx.fillRect(145,25,40,30);ctx.fillRect(215,33,8,52);
+    const env=new T.CanvasTexture(envCanvas);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;scene.environment=env;
+    actor=buildDasheng(T,imgs);scene.add(actor.root);frame();
+  }
+  new ResizeObserver(resize).observe(stage);
+  document.addEventListener('visibilitychange',frame);
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fallback();});
+  canvas.addEventListener('webglcontextrestored',()=>{failed=false;frame();});
+  window.dasheng3d={enable,stop(){action='';duration=0;frame();},setMood(v){mood=v;},setStatus(v){status=v;},play(v){
+    if(!durations[v])return;action=v;start=performance.now()/1000;duration=durations[v];frame();
+  }};
+  enable(true);init().catch(err=>{console.warn('大圣喵使用原画模式',err.message);fallback();});
+})();

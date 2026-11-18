@@ -8,13 +8,17 @@
 
 | 宠物 | 目录 | 简介 |
 | --- | --- | --- |
-| 🐱 大圣派特 | `pets/dasheng/` | 齐天大圣·喵版，悟空话术气泡，双击换脸开怀 |
+| 🐱 大圣喵 3D | `pets/dasheng/` | 齐天大圣·喵版，悟空话术气泡，双击换脸开怀 |
 | ✨ 极光萌可 | `pets/auroraping/` | 《奇妙萌可》传奇萌可，代表元素「承诺」，金色弓箭，4 态切换 |
 | 🐂 牛来 | `pets/niulai/` | 盼牛市吉祥物，7 态表情包（暗中/上头/摆烂/无语/开摆/发疯/你说的） |
 
 更多宠物持续添加中——每个宠物就是一个 `pets/<name>/` 目录，放进来自动出现在安装器列表里。
 
 ## 快速安装
+
+Windows 10/11 x64 可直接下载 [大圣喵 3D 一键安装包](https://github.com/alankongx/desktop-pet/releases/download/dasheng-v2.2.0/DashengPet-2.2.0-Windows-x64-Setup.exe)，双击后安装并启动。
+
+从源码安装可用以下命令。
 
 ```bash
 git clone git@github.com:alankongx/desktop-pet.git
