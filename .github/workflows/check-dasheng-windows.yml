@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       sha256:
-        description: SHA-256 of the published 2.2.0 installer
+        description: SHA-256 of the published 2.2.1 installer
         required: true
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $exe = Join-Path $env:RUNNER_TEMP 'DashengPet-Setup.exe'
-          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/dasheng-v2.2.0/DashengPet-2.2.0-Windows-x64-Setup.exe"
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/dasheng-v2.2.1/DashengPet-2.2.1-Windows-x64-Setup.exe"
           Invoke-WebRequest $url -OutFile $exe
           if ((Get-FileHash $exe).Hash -ne $env:EXPECTED) { throw 'Incorrect checksum' }
           $install = Start-Process $exe '/S' -Wait -PassThru

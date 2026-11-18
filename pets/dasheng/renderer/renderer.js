@@ -159,6 +159,7 @@
   }
   document.addEventListener('visibilitychange',scheduleActions);
   if(window.petAPI) {
+    window.petAPI.onCloudStyle(value=>window.dasheng3d?.setCloudStyle(value));
     window.petAPI.onAction(id=>playAction(id));
     window.petAPI.onAutoActions(v=>{autoEnabled=v;if(!v)stopAutoAction();scheduleActions();});
     window.petAPI.onMode(v=>{

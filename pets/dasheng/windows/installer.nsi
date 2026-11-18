@@ -3,18 +3,17 @@ Name "大圣喵 3D 桌宠"
 OutFile "DashengPet-Setup.exe"
 InstallDir "$LOCALAPPDATA\Programs\DashengPet"
 RequestExecutionLevel user
-SetCompressor /SOLID lzma
-SetCompressorDictSize 16
+SetCompressor /SOLID zlib
 Icon "payload/pet.ico"
 UninstallIcon "payload/pet.ico"
 Caption "安装大圣喵 3D 桌宠"
 ShowInstDetails nevershow
 !include "x64.nsh"
 !define UNKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\DashengPet"
-VIProductVersion "2.2.0.0"
+VIProductVersion "2.2.1.0"
 VIAddVersionKey "ProductName" "大圣喵 3D 桌宠"
 VIAddVersionKey "FileDescription" "大圣喵 Windows 安装程序"
-VIAddVersionKey "FileVersion" "2.2.0"
+VIAddVersionKey "FileVersion" "2.2.1"
 VIAddVersionKey "LegalCopyright" "大圣喵桌宠项目"
 Page instfiles
 UninstPage uninstConfirm
@@ -48,7 +47,7 @@ Section
   CreateShortcut "$DESKTOP\大圣喵.lnk" "$INSTDIR\DashengPet.exe" "" "$INSTDIR\pet.ico"
   CreateShortcut "$SMPROGRAMS\大圣喵.lnk" "$INSTDIR\DashengPet.exe" "" "$INSTDIR\pet.ico"
   WriteRegStr HKCU "${UNKEY}" "DisplayName" "大圣喵 3D 桌宠"
-  WriteRegStr HKCU "${UNKEY}" "DisplayVersion" "2.2.0"
+  WriteRegStr HKCU "${UNKEY}" "DisplayVersion" "2.2.1"
   WriteRegStr HKCU "${UNKEY}" "DisplayIcon" "$INSTDIR\pet.ico"
   WriteRegStr HKCU "${UNKEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   IfSilent done

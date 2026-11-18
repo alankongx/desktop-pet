@@ -16,9 +16,11 @@
 
 ## 快速安装
 
-Windows 10/11 x64 可直接下载 [大圣喵 3D 一键安装包](https://github.com/alankongx/desktop-pet/releases/download/dasheng-v2.2.0/DashengPet-2.2.0-Windows-x64-Setup.exe)，双击后安装并启动。
+Windows 10/11 x64 可直接下载 [大圣喵 3D 一键安装包](https://github.com/alankongx/desktop-pet/releases/download/dasheng-v2.2.1/DashengPet-2.2.1-Windows-x64-Setup.exe)，双击后安装并启动。
 
 从源码安装可用以下命令。
+
+
 
 ```bash
 git clone git@github.com:alankongx/desktop-pet.git

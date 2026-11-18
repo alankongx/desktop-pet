@@ -28,7 +28,7 @@ function buildDasheng(T,pictures){
   }
   // Cross-sections are [height in the image, left, right, depth multiplier].
   // Densify broad sections so depth and UV coordinates remain smooth through a turn.
-  function hull(p,rows,midZ,depth,back,front=paint,power=.85){
+  function hull(p,rows,midZ,depth,back,front=paint,power=.85,rearDepth=depth){
     const sections=[];
     for(let i=0;i<rows.length-1;i++){
       const a=rows[i],b=rows[i+1],steps=Math.max(1,Math.ceil((b[0]-a[0])/7));
@@ -39,7 +39,7 @@ function buildDasheng(T,pictures){
     for(const [y,l,r,scale=1] of sections)for(let i=0;i<=steps;i++){
       const t=-Math.PI/2+2*Math.PI*i/steps,c=Math.cos(t);
       const x=(r+l)/2+Math.sin(t)*(r-l)/2;
-      point(x,y,midZ+Math.sign(c)*Math.pow(Math.abs(c),power)*depth*scale);
+      point(x,y,midZ+Math.sign(c)*Math.pow(Math.abs(c),power)*(c<0?rearDepth:depth)*scale);
     }
     const g=new T.BufferGeometry();
     for(let side=0;side<2;side++){
@@ -60,10 +60,28 @@ function buildDasheng(T,pictures){
   }
   const body=group(root,256,354,0),head=group(body,256,278,0);
   // Head housing, including the gold brow. Earpieces and ears are separate solids.
-  hull(head,[[91,244,269,.22],[95,215,296,.48],[103,183,328,.66],[116,154,353,.80],
+  const helmetRows=[[91,244,269,.22],[95,215,296,.48],[103,183,328,.66],[116,154,353,.80],
     [130,144,366,.93],[151,144,369,.98],[204,146,369,1],[236,151,363,.98],
-    [249,157,357,.89],[260,168,345,.77],[269,182,333,.66],[276,204,307,.51],[281,232,280,.25]],
-    -3,70,alloy,visor,.64);
+    [249,157,357,.89],[260,168,345,.77],[269,182,333,.66],[276,204,307,.51],[281,232,280,.25]];
+  hull(head,helmetRows,-3,70,alloy,visor,.64,110);
+  function shellPoint(angle,y,raise=0){
+    const i=helmetRows.findIndex(r=>r[0]>=y);
+    const lo=helmetRows[Math.max(0,i-1)],hi=helmetRows[i],f=(y-lo[0])/(hi[0]-lo[0]||1);
+    const l=lo[1]+(hi[1]-lo[1])*f,r=lo[2]+(hi[2]-lo[2])*f,scale=lo[3]+(hi[3]-lo[3])*f;
+    return [(l+r)/2+((r-l)/2+raise)*Math.sin(angle),y,-3-(110*scale+raise)*Math.max(0,Math.cos(angle))**.64];
+  }
+  // Low-relief segmented plates sit on the actual rear dome at every azimuth.
+  for(const side of [-1,1]){
+    for(const [start,end] of [[.07,.53],[.57,1.10]]){
+      const panel=(u,v)=>shellPoint(side*(start+(end-start)*u),119+v*(125-17*u)+9*u,1.4+2.8*Math.sin(Math.PI*u)*Math.sin(Math.PI*v));
+      ribbon(head,alloy,13,20,(u,v)=>local(head,...panel(u,v)));
+      line(head,bronze,Array.from({length:16},(_,j)=>panel(0,j/15)),1.05);
+    }
+  }
+  const band=(u,v)=>shellPoint((u-.5)*Math.PI,139+v*8+3*Math.cos((u-.5)*Math.PI*2),2.6);
+  ribbon(head,gold,48,3,(u,v)=>local(head,...band(u,v)));
+  for(const u of [.13,.29,.50,.71,.87]){const [x,y,z]=band(u,.5);orb(head,bright,x,y,z,2.6,2.6,2.6);}
+
   // Sculpt a second curved lens registered to the same pixels for added relief.
   hull(head,[[128,236,281,.2],[132,197,313,.55],[140,179,333,.76],[153,169,343,.86],
     [171,163,350,.95],[194,161,353,1],[218,162,352,1],[237,166,348,.93],[249,173,341,.82],
@@ -88,12 +106,7 @@ function buildDasheng(T,pictures){
     line(head,bright,filigree,1.2);
   }
   line(head,bronze,[[126,154,-14],[138,111,-24],[171,76,-33],[214,62,-38],[256,58,-39],[299,62,-38],[342,76,-33],[371,112,-24],[386,153,-14]],5.6);
-  // The rear trim follows the curved shell rather than bridging open air.
-  line(head,bronze,[[147,143,-8],[157,143,-37],[180,140,-53],[215,139,-64],[256,139,-68],
-    [299,139,-64],[332,140,-53],[355,143,-37],[366,143,-8]],2.4);
   for(const s of [-1,1]){
-    const backSeam=[[256+s*17,257,-47],[256+s*41,247,-59],[256+s*59,232,-61],[256+s*68,210,-60],[256+s*68,189,-59]];
-    line(head,bronze,backSeam,1.2);
     // Raised cloud ornaments on each headphone end cap.
     const x=s<0?102:412;
     for(let j=0;j<3;j++){
@@ -129,7 +142,20 @@ function buildDasheng(T,pictures){
   ctx.restore();const sleepFace=new T.CanvasTexture(sleep);sleepFace.colorSpace=T.SRGBColorSpace;
 
   hull(body,[[273,223,291,.63],[280,202,312,.86],[294,199,315,.97],[313,199,314,1],[334,195,317,1],
-    [349,191,319,.95],[359,191,321,.82]],0,39,bronze);
+    [349,191,319,.95],[359,191,321,.82]],0,39,bronze,paint,.85,65);
+  // Fill the neck, shoulder blades and pelvis behind the front armour.
+  orb(body,dark,256,280,-12,34,16,37);
+  orb(body,leather,256,368,-16,55,37,46);
+  for(const side of [-1,1])orb(body,bronze,256+side*31,299,-21,29,24,32);
+  for(const [top,span,depth] of [[288,1.14,64],[312,1.24,69],[333,1.28,66],[353,1.31,61],[375,1.29,56]]){
+    const plate=(u,v)=>{
+      const a=(u-.5)*2*span,c=Math.cos(a);
+      return [256+(60+3*v)*Math.sin(a),top+v*(18+5*c)+2.8*v*Math.cos(5*a),-7-(depth+5*v)*c];
+    };
+    ribbon(body,top===353?leather:bronze,26,5,(u,v)=>local(body,...plate(u,v)));
+    line(body,gold,Array.from({length:25},(_,i)=>plate(i/24,1)),1.4);
+    for(const u of [.24,.43,.57,.76]){const [x,y,z]=plate(u,.60);orb(body,bright,x,y,z-1,1.8,1.8,1.8);}
+  }
   // The three overlapping fur panels have individual pointed hems.
   hull(body,[[350,226,285,.7],[365,225,287,1],[390,224,286,1],[409,230,281,.91],[422,244,269,.64],[431,255,258,.2]],22,24,leather);
   for(const s of [-1,1]){
@@ -146,22 +172,33 @@ function buildDasheng(T,pictures){
   }
   function cloth(u,v){
     const phi=(u-.5)*4.02,spread=54+96*v**1.67,fold=Math.cos(10*phi),edge=Math.abs(Math.sin(phi));
-    return [256+spread*Math.sin(phi),280+v*(140-5*fold-22*Math.exp(-((Math.abs(phi)-1.65)**2)/.032)+12*Math.exp(-((Math.abs(phi)-2.0)**2)/.013)), -8-(28+35*v+9*v*fold)*Math.cos(phi)+5*v*edge];
+    return [256+spread*Math.sin(phi),280+v*(140-5*fold-22*Math.exp(-((Math.abs(phi)-1.65)**2)/.032)+12*Math.exp(-((Math.abs(phi)-2.0)**2)/.013)), -14-(47+42*v+20*Math.sin(Math.PI*v)+v*(8+4*v)*fold)*Math.cos(phi)+5*v*edge];
   }
-  ribbon(cape,silk,64,18,(u,v)=>local(cape,...cloth(u,v)));
-  line(cape,bright,Array.from({length:65},(_,i)=>cloth(i/64,1)),1.7);
-  for(const u of [0,1])line(cape,gold,Array.from({length:12},(_,j)=>cloth(u,j/11)),1.4);
-  // Relief seams on the back of the cloak.
-  for(const u of [.29,.43,.57,.71])line(cape,red,Array.from({length:13},(_,i)=>{const v=i/12*.88+.06;const [x,y,z]=cloth(u,v);return [x,y,z-1];}),.9);
+  // Twin panels are gathered at the shoulders, then part over the layered back armour.
+  for(const side of [-1,1]){
+    const panel=(u,v)=>{
+      const gap=.012+.108*v*v;
+      return cloth(.5+side*(gap+u*(.5-gap)),v);
+    };
+    ribbon(cape,silk,34,22,(u,v)=>local(cape,...panel(u,v)));
+    for(const u of [0,1])line(cape,gold,Array.from({length:18},(_,j)=>panel(u,j/17)),1.2);
+    line(cape,bright,Array.from({length:36},(_,j)=>panel(j/35,1)),1.5);
+    for(const u of [.23,.58]){
+      line(cape,red,Array.from({length:20},(_,j)=>{const [x,y,z]=panel(u,.04+.86*j/19);return [x,y,z-1.5];}),1.1);
+    }
+  }
   const legs=[];
   for(const s of [-1,1]){
     const x=s<0?215:298,leg=group(root,x,397,0);legs.push(leg);
     const data=s<0?[[397,208,240,.38],[410,198,239,.84],[424,196,240,1],[439,198,233,.91],[452,196,231,.84],[460,192,229,1],[467,184,232,1],[474,183,232,.86],[477,188,226,.48]]:
       [[397,271,309,.39],[409,271,315,.8],[423,273,320,1],[440,279,319,.91],[453,280,315,.85],[462,282,321,1],[471,281,326,1],[476,285,325,.71],[478,292,319,.3]];
-    hull(leg,data,0,21,leather);
-    const cuff=new T.TorusGeometry(.168,.016,8,32);const trim=mesh(leg,cuff,bronze);trim.rotation.x=Math.PI/2;trim.position.set(...local(leg,x,444,-2));
+    const split=data.findIndex(row=>row[0]>=423),at=data[split];
+    const shin=group(leg,x,at[0],0);leg.userData.knee=shin;
+    hull(leg,data.slice(0,split+1),0,21,leather);
+    hull(shin,data.slice(split),0,21,leather);
+    const cuff=new T.TorusGeometry(.168,.016,8,32);const trim=mesh(shin,cuff,bronze);trim.rotation.x=Math.PI/2;trim.position.set(...local(shin,x,444,-2));
   }
-  const arms=[];
+  const arms=[],fingerJoints=[];let freeWrist;
   for(const s of [-1,1]){
     const left=s<0;
     const a=group(body,left?192:322,294,6),elbow=group(a,left?161:352,327,12);arms.push({a,elbow});
@@ -174,7 +211,38 @@ function buildDasheng(T,pictures){
       hull(elbow,[[308,118,125,.33],[313,112,133,.85],[320,103,137,1],[331,103,138,1],[341,107,134,.92],[350,113,130,.69],[354,118,123,.26]],29,13,alloy);
     }else{
       hull(elbow,[[307,354,369,.3],[312,342,373,.79],[322,338,377,1],[334,340,371,1],[344,347,363,.72],[347,351,358,.34]],18,17,bronze);
-      hull(elbow,[[287,386,392,.33],[290,381,400,.67],[297,378,405,.86],[303,371,414,1],[309,367,418,1],[315,365,414,1],[325,365,400,.93],[335,371,391,.69],[340,374,382,.31]],28,14,alloy);
+      // Anatomical left hand (screen right). The cuff belongs to the forearm,
+      // while palm, thumb and bent fingertips share a separately posed wrist.
+      freeWrist=group(elbow,369,322,23);
+      const palm=new T.Group();freeWrist.add(palm);
+      function pad(parent,mat,x,y,z,w,h,d){
+        const piece=mesh(parent,sphere,mat);piece.position.set(x,y,z);piece.scale.set(w,h,d);return piece;
+      }
+      function phalanx(parent,from,to,width,mat){
+        const start=new T.Vector3(...from),end=new T.Vector3(...to),axis=end.clone().sub(start);
+        const finger=mesh(parent,sphere,mat);finger.position.copy(start).lerp(end,.5);
+        finger.scale.set(width,axis.length()*.58,width*.87);
+        finger.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),axis.normalize());
+      }
+      pad(palm,dark,0,-.015,0,.09,.075,.085);
+      pad(palm,alloy,0,-.127,0,.142,.156,.092);
+      pad(palm,bronze,0,-.122,.076,.112,.105,.027);
+      pad(palm,gold,0,-.12,.099,.078,.075,.016);
+      pad(palm,dark,0,-.13,-.075,.105,.107,.021);
+      const digits=[[-.089,.157],[-.029,.182],[.034,.169],[.092,.128]];
+      for(const [x,len] of digits){
+        const y=-.219+Math.abs(x)*.23,z=-.005;
+        const first=[x,y,z],knuckle=[x*1.12,y-len*.55,z-.025],tip=[x*1.11,y-len,z-.083];
+        pad(palm,dark,x,y,z,.034,.043,.039);
+        phalanx(palm,first,knuckle,.035,alloy);
+        pad(palm,dark,...knuckle,.03,.033,.03);
+        const hinge=new T.Group();palm.add(hinge);hinge.position.set(...knuckle);
+        const relative=tip.map((val,i)=>val-knuckle[i]);
+        phalanx(hinge,[0,0,0],relative,.034,alloy);fingerJoints.push(hinge);
+      }
+      phalanx(palm,[-.102,-.079,-.015],[-.177,-.156,-.026],.049,alloy);
+      pad(palm,dark,-.172,-.157,-.029,.039,.041,.041);
+      phalanx(palm,[-.177,-.156,-.026],[-.163,-.219,-.092],.038,alloy);
     }
   }
   // Lathed staff. Cap-to-cap distance and grip position are measured on the source image.
@@ -225,5 +293,48 @@ function buildDasheng(T,pictures){
     trail(offset+.43,1.49,.985,.044,0xffca69,.84,-.17);
   }
   wind.visible=false;
-  return {root,body,head,arms,legs,staff,wind,windMaterials,cape,feathers,visor,faces,sleepFace};
+  // Back-to-front: a tapered comet tail, soft billows, then the curled ruyi relief.
+  const cloud=new T.Group();cloud.name='筋斗云';cloud.visible=false;
+  const cloudGold=new T.MeshStandardMaterial({color:0xf3ab32,roughness:.50,metalness:.14});
+  const cloudLight=new T.MeshStandardMaterial({color:0xffda73,roughness:.55,metalness:.10});
+  const edgeGold=new T.MeshStandardMaterial({color:0xd99029,roughness:.52,metalness:.18});
+  const puff=new T.SphereGeometry(1,32,20);
+  function billow(material,x,y,z,w,h,d){
+    const part=new T.Mesh(puff,material);
+    part.position.set(x,y,z);part.scale.set(w,h,d);cloud.add(part);
+  }
+  const cloudTail=new T.Group();cloud.add(cloudTail);cloudTail.position.x=-.48;
+  function curl(material,coords,radiusAt,parent=cloud){
+    const path=new T.CatmullRomCurve3(coords.map(v=>new T.Vector3(...v)));
+    const rings=40,sides=9,frames=path.computeFrenetFrames(rings,false),verts=[],indices=[];
+    for(let j=0;j<=rings;j++){
+      const u=j/rings,center=path.getPointAt(u),r=radiusAt(u);
+      for(let i=0;i<=sides;i++){
+        const angle=2*Math.PI*i/sides;
+        const vertex=center.clone().addScaledVector(frames.normals[j],r*Math.cos(angle)).addScaledVector(frames.binormals[j],r*Math.sin(angle));
+        verts.push(vertex.x,vertex.y,vertex.z);
+        if(j<rings&&i<sides){const a=j*(sides+1)+i,b=a+sides+1;indices.push(a,a+1,b,a+1,b+1,b);}
+      }
+    }
+    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();
+    const strand=new T.Mesh(geo,material);parent.add(strand);
+    if(parent===cloudTail)strand.position.x=.48;
+  }
+  curl(cloudGold,[[-.48,-.06,-.05],[-1.13,-.12,-.08],[-1.65,.17,-.12],[-2.1,.45,-.15],[-2.63,.42,-.18],[-2.93,.62,-.20]],u=>.26*(1-u)**.8+.003,cloudTail);
+  curl(cloudLight,[[-.87,-.04,.04],[-1.48,.16,.0],[-1.81,.49,-.03],[-2.14,.64,-.03],[-2.48,.58,-.04]],u=>.106*(1-u)+.003,cloudTail);
+  billow(cloudGold,0,-.095,0,1.19,.265,.48);
+  billow(cloudLight,-.78,-.025,.06,.49,.235,.38);
+  billow(cloudGold,-.34,-.13,.22,.48,.255,.30);
+  billow(cloudLight,.20,.03,-.05,.61,.27,.40);
+  billow(cloudLight,.72,.075,.03,.46,.355,.38);
+  billow(cloudGold,.99,-.085,.04,.36,.22,.33);
+  for(const [cx,cy,r] of [[.73,.085,.207],[-.68,-.018,.138],[.01,-.092,.134]]){
+    const points=[];
+    for(let j=0;j<=18;j++){
+      const u=j/18,theta=-.8+u*Math.PI*2.05,rad=r*(1-.88*u);
+      points.push([cx+rad*Math.cos(theta),cy+rad*Math.sin(theta),.384+.023*Math.sin(u*Math.PI)]);
+    }
+    curl(edgeGold,points,u=>.034*(1-.55*u));
+  }
+  return {root,body,head,arms,freeWrist,fingerJoints,legs,staff,wind,windMaterials,cape,feathers,visor,faces,sleepFace,cloud,cloudTail};
 }

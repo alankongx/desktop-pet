@@ -131,6 +131,7 @@ function createWindow() {
   win.webContents.once('dom-ready', () => {
     win.webContents.send('init-size', currentSizeName);
     win.webContents.send('pet-mode', config.mode || '3d');
+    win.webContents.send('cloud-style',config.cloudStyle || 'depart');
     win.webContents.send('auto-actions', (config.autoActions ?? config.autoStaff) !== false);
     startMonitor();
   });
@@ -147,6 +148,10 @@ function createWindow() {
     const menu = Menu.buildFromTemplate([
       { label:'做个动作', submenu:require('./actions').map(({id,label})=>({
         label,click:()=>win.webContents.send('pet-action',id)
+      })) },
+      { label:'筋斗云样式', submenu:[['depart','翻筋斗飞远'],['glide','接云滑行']].map(([id,label])=>({
+        label,type:'radio',checked:(config.cloudStyle || 'depart')===id,
+        click:()=>{saveSetting('cloudStyle',id);win.webContents.send('cloud-style',id);win.webContents.send('pet-action','cloud');}
       })) },
       { label: '形象', submenu: [['3d','3D 大圣'],['classic','经典原画']].map(([id,label]) => ({
         label, type:'radio', checked:(config.mode || '3d') === id,

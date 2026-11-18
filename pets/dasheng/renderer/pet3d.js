@@ -2,6 +2,7 @@
   const canvas=document.querySelector('#dasheng-3d'), root=document.querySelector('#pet-root');
   const stage=document.querySelector('#pet-stage');
   let active=true, failed=false, actor, renderer, scene, camera, previous=0, timer=0;
+  let cloudStyle='depart';
   let action='', start=0, duration=0, mood='default', status='idle';
   const durations=Object.fromEntries(dashengActions.map(action=>[action.id,action.seconds]));
   const sin=Math.sin, pi=Math.PI;
@@ -34,17 +35,80 @@
       busy=status==='working'&&!action, thinking=mood==='thinking'||status==='waiting'&&!action;
     a.root.rotation.y=-.009+.020*sin(t*.78)+(action==='turn'?2*pi*(progress-sin(2*pi*progress)/(2*pi)):0);
     a.root.position.y=.007*sin(t*2.5)+(action==='happy'?.115*Math.abs(sin(elapsed*7))*weight:0);
+    // Rotate about the centre of the character, keeping the cloud horizontal.
+    const flying=action==='cloud';
+    a.cloud.visible=flying;
+    a.root.position.x=0;a.root.position.z=0;a.root.rotation.order='YXZ';a.root.rotation.x=0;a.root.rotation.z=0;a.root.scale.setScalar(1);
+    canvas.style.opacity='1';
+    // Pitch forward in the direction of travel, around the hips, while facing left.
+    let tuck=0;
+    const launch=flying?Math.sin(pi*ease(progress/.16)):0;
+    function somersault(x,height,size,flip,facing){
+      const pitch=2*pi*flip,yaw=-1.25*facing,pivot=2.12*size;
+      tuck=Math.sin(pi*flip);
+      a.root.rotation.y+=yaw;a.root.rotation.x=pitch;
+      a.root.position.x=x-pivot*Math.sin(a.root.rotation.y)*sin(pitch);
+      a.root.position.z=-pivot*Math.cos(a.root.rotation.y)*sin(pitch);
+      a.root.position.y+=height+pivot*(1-Math.cos(pitch))-.06*launch;
+    }
+    if(flying && cloudStyle==='glide'){
+      const land=.57;
+      const flip=ease((progress-.18)/(land-.18));
+      const rise=ease(progress/.14),settle=1-ease((progress-.83)/.17);
+      const ride=rise*settle;
+      const hop=.85*Math.sin(pi*ease((progress-.04)/(land-.04)));
+      const glide=ease((progress-land)/.25);
+      const x=-1.50*glide*(1-ease((progress-.84)/.16));
+      const floor=.52*ride;
+      somersault(x,floor+hop,1,flip,ease(progress/.18)*(1-ease((progress-.64)/.30)));
+      const appear=ease((progress-.20)/.30)*settle;
+      a.cloud.scale.set(-appear,appear,appear);
+      const impact=.095*Math.sin(pi*ease((progress-.55)/.10));
+      a.cloud.position.set(x,floor-.23*appear-impact,.02);
+      const stream=ease((progress-land)/.13)*(1-ease((progress-.80)/.16));
+      a.cloudTail.scale.x=1+.66*stream;
+    }else if(flying && progress<.88){
+      a.cloudTail.scale.x=1;
+      const summon=ease(progress/.16), flight=ease((progress-.12)/.71);
+      const size=1-.96*flight;
+      const flip=ease((progress-.19)/.38);
+      const x=-4.34*flight;
+      const altitude=.46*summon+4.44*flight+.36*sin(pi*flight);
+      a.root.scale.setScalar(size);
+      somersault(x,altitude,size,flip,ease(progress/.17));
+      const puffSize=Math.max(.001,summon*size);
+      a.cloud.scale.set(-puffSize,puffSize,puffSize);
+      a.cloud.position.set(x,altitude-.16*size,.02);
+      a.cloud.rotation.z=.06*flight;
+      canvas.style.opacity=String(1-ease((progress-.75)/.09));
+    }else if(flying){
+      a.cloud.visible=false;
+      canvas.style.opacity=String(ease((progress-.91)/.09));
+    }
     a.body.rotation.set(nap?.13:busy?.055+.055*sin(t*4):0,angry?.07*sin(t*17):0,.006*sin(t*2));
     a.head.rotation.set(nap?.29+.055*sin(t*2):busy?.09+.065*sin(t*4):.013*sin(t*1.9),
       thinking?.24+.07*sin(t*2):.031*sin(t*.9),nap?-.15:thinking?.13:angry?.045*sin(t*17):.007*sin(t*1.7));
     const [left,right]=a.arms;
     left.a.rotation.set(0,0,0);left.elbow.rotation.set(0,0,0);
-    right.a.rotation.set(0,0,0);right.elbow.rotation.set(0,0,0);
+    right.a.rotation.set(-.085,-.11,-.025);right.elbow.rotation.set(-.23,0,-.40);
+    a.freeWrist.rotation.order='ZXY';
+    a.freeWrist.rotation.set(-.28+.03*sin(t*1.4),.37+.045*sin(t*1.1),.24);
+    let openPalm=0;
+
     if(action==='wave'||action==='happy'||thinking){
       const v=thinking&&!action?.65:weight;
-      right.a.rotation.z+=v*(.75+.13*sin(elapsed*9));
-      right.elbow.rotation.z+=v*(.36+.43*sin(elapsed*12));
+      openPalm=v;
+      right.a.rotation.z+=v*(1.09+.09*sin(elapsed*8));
+      right.elbow.rotation.z+=v*1.29;
+      a.freeWrist.rotation.z+=v*(.82+.24*sin(elapsed*10));
+      a.freeWrist.rotation.y+=v*2.62;
       right.elbow.rotation.x+=.35*v;
+    }
+    a.fingerJoints.forEach((finger,i)=>{finger.rotation.x=(.35+i*.10)*(1-openPalm)+.39*tuck-.46*openPalm;});
+    if(flying){
+      a.body.rotation.x+=.26*tuck+.20*launch;a.head.rotation.x+=.22*tuck;
+      left.a.rotation.x-=.35*tuck;right.a.rotation.x-=.45*tuck;
+      right.elbow.rotation.x-=.78*tuck;right.elbow.rotation.z+=.2*launch;
     }
     if(busy) {right.elbow.rotation.x-=.38+.30*sin(t*4);right.a.rotation.z+=.14*sin(t*4);}
     // Counter-rotate the wrist so the staff points upright in its resting pose.
@@ -73,8 +137,11 @@
     a.wind.scale.x=a.staff.scale.y/a.staff.scale.x;
     if(a.wind.visible)for(const {material,strength} of a.windMaterials)material.opacity=whirl*strength;
     for(const [i,f] of a.feathers.entries())f.rotation.z=(i?1:-1)*(.025*sin(t*2.4)+(action==='turn'?weight*.11:0));
-    a.cape.rotation.x=-.04+.045*sin(t*2)+(action==='turn'?weight*.29:0);
-    a.legs.forEach((leg,i)=>{leg.rotation.x=action==='turn'?weight*.24*sin(elapsed*9+i*pi):0;});
+    a.cape.rotation.x=(flying?.18*weight:-.04)+.045*sin(t*2)+(action==='turn'?weight*.29:0);
+    a.legs.forEach((leg,i)=>{
+      leg.rotation.x=action==='turn'?weight*.24*sin(elapsed*9+i*pi):-(.79+i*.18)*tuck-.32*launch;
+      leg.userData.knee.rotation.x=1.13*tuck+.54*launch;
+    });
     const texture=nap?a.sleepFace:mood==='happy'||action==='happy'?a.faces[1]:a.faces[0];
     a.visor.map=texture;a.visor.color.setHex(angry?0xff624c:0xffffff);
     canvas.classList.toggle('rage',angry);renderer.render(scene,camera);
@@ -110,13 +177,13 @@
     ctx.fillStyle=grad;ctx.fillRect(0,0,256,128);ctx.fillStyle='#ffffff';
     ctx.fillRect(22,18,33,51);ctx.fillRect(145,25,40,30);ctx.fillRect(215,33,8,52);
     const env=new T.CanvasTexture(envCanvas);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;scene.environment=env;
-    actor=buildDasheng(T,imgs);scene.add(actor.root);frame();
+    actor=buildDasheng(T,imgs);scene.add(actor.root,actor.cloud);frame();
   }
   new ResizeObserver(resize).observe(stage);
   document.addEventListener('visibilitychange',frame);
   canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fallback();});
   canvas.addEventListener('webglcontextrestored',()=>{failed=false;frame();});
-  window.dasheng3d={enable,stop(){action='';duration=0;frame();},setMood(v){mood=v;},setStatus(v){status=v;},play(v){
+  window.dasheng3d={enable,setCloudStyle(value){cloudStyle=value==='glide'?'glide':'depart';},stop(){action='';duration=0;frame();},setMood(v){mood=v;},setStatus(v){status=v;},play(v){
     if(!durations[v])return;action=v;start=performance.now()/1000;duration=durations[v];frame();
   }};
   enable(true);init().catch(err=>{console.warn('大圣喵使用原画模式',err.message);fallback();});

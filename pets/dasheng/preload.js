@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('petAPI', {
   onAutoActions: cb => ipcRenderer.on('auto-actions', (_,enabled) => cb(enabled)),
+  onCloudStyle: cb => ipcRenderer.on('cloud-style', (_,style) => cb(style)),
   onAction: cb => ipcRenderer.on('pet-action', (_,id) => cb(id)),
   onMode: cb => ipcRenderer.on('pet-mode', (_,mode) => cb(mode)),
   onCodex: cb => ipcRenderer.on('codex-status', (_,state) => cb(state)),

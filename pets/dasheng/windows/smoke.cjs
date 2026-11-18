@@ -50,7 +50,7 @@ async function run(){
       fs.rmSync(path.join(dir,'dasheng-pet',id+'.notice'));
     }
     hooks.configure(false);assert(!hooks.registered());
-    console.log('Windows install: 3D, eight actions and two Codex notification fixtures passed');
+    console.log('Windows install: 3D, nine actions and two Codex notification fixtures passed');
   }finally{await app.close();}
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});
