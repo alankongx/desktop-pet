@@ -4,14 +4,14 @@ const path = require('path');
 const fs = require('fs');
 
 // macOS GPU 沙箱绕过（公司 Mac 经常踩这个坑）
-if (process.platform === 'darwin') {
+if (process.platform === 'darwin' && !app.isPackaged) {
   app.commandLine.appendSwitch('disable-gpu-sandbox');
   app.commandLine.appendSwitch('no-sandbox');
 }
 if (process.platform === 'win32') {
   app.setAppUserModelId('DashengPet.Desktop');
-  if (!app.requestSingleInstanceLock()) app.exit(0);
 }
+if ((process.platform === 'win32' || app.isPackaged) && !app.requestSingleInstanceLock()) app.exit(0);
 
 let win = null;
 
@@ -27,7 +27,7 @@ const SIZE_PRESETS = {
 const WIN_PAD_RIGHT = 40;
 const WIN_PAD_BOTTOM = 40;
 
-const CONFIG_PATH = path.join(process.platform === 'win32' ? app.getPath('userData') : __dirname, 'config.json');
+const CONFIG_PATH = path.join(process.platform === 'win32' || app.isPackaged ? app.getPath('userData') : __dirname, 'config.json');
 
 function readConfig() {
   try { return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) || {}; }
@@ -54,6 +54,12 @@ function startMonitor() {
     if (win && !win.isDestroyed()) win.webContents.send('codex-status', state);
   });
 }
+const rotationSpeeds = [
+  {id:'fast', label:'快 · 18 秒', ms:18000},
+  {id:'medium', label:'中 · 30 秒', ms:30000},
+  {id:'slow', label:'慢 · 60 秒', ms:60000},
+];
+let rotationSpeed = rotationSpeeds.find(item => item.id === config.rotationSpeed) || rotationSpeeds[1];
 let currentSizeName = SIZE_PRESETS[config.size] ? config.size : 'medium';
 function field(size=currentSizeName) {
   const p=SIZE_PRESETS[size],w=p.petW,h=p.petH+p.bubbleH,side=Math.ceil(w*.68);
@@ -132,6 +138,7 @@ function createWindow() {
     win.webContents.send('init-size', currentSizeName);
     win.webContents.send('pet-mode', config.mode || '3d');
     win.webContents.send('cloud-style',config.cloudStyle || 'depart');
+    win.webContents.send('rotation-interval', rotationSpeed.ms);
     win.webContents.send('auto-actions', (config.autoActions ?? config.autoStaff) !== false);
     startMonitor();
   });
@@ -159,6 +166,14 @@ function createWindow() {
       })) },
       { label:'自动轮换动作和话术', type:'checkbox', checked:(config.autoActions ?? config.autoStaff) !== false,
         click:item => {saveSetting('autoActions',item.checked); win.webContents.send('auto-actions',item.checked);} },
+      { label:'轮播速度', submenu:rotationSpeeds.map(speed => ({
+        label:speed.label, type:'radio', checked:rotationSpeed.id === speed.id,
+        click:() => {
+          rotationSpeed = speed;
+          saveSetting('rotationSpeed', speed.id);
+          win.webContents.send('rotation-interval', speed.ms);
+        }
+      })) },
       { label:'跟随 Codex 状态', type:'checkbox', checked:config.codexSync !== false,
         click:item => {saveSetting('codexSync',item.checked); startMonitor();} },
       { label:'管理 Codex 确认提醒…', click:async()=>{

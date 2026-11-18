@@ -139,6 +139,7 @@
     setSpeech(currentStatusLine||nextLine(phrases.idle));
   }
   let autoEnabled=true, in3d=true, nextActionIndex=0, autoPlaying=false;
+  let rotationInterval = 30000;
   let autoTimer, speechRestore;
   const attentionStates=['input','waiting','failed','done','interrupted'];
   function scheduleActions(){
@@ -151,7 +152,7 @@
         nextActionIndex=(nextActionIndex+1)%dashengActions.length;
       }
       scheduleActions();
-    },9000);
+    },rotationInterval);
   }
   function stopAutoAction(){
     if(!autoPlaying)return;
@@ -169,7 +170,7 @@
     speechRestore=setTimeout(()=>{
       autoPlaying=false;
       restoreSpeech();
-    },duration);
+    },automatic ? rotationInterval / 2 : duration);
   }
   document.addEventListener('visibilitychange',scheduleActions);
   if(window.petAPI) {
@@ -178,6 +179,11 @@
       window.dasheng3d?.setCloudStyle(cloudStyle);
     });
     window.petAPI.onAction(id=>playAction(id));
+    window.petAPI.onRotationInterval(ms=>{
+      if (!Number.isFinite(ms) || ms <= 0) return;
+      rotationInterval=ms;
+      scheduleActions();
+    });
     window.petAPI.onAutoActions(v=>{autoEnabled=v;if(!v)stopAutoAction();scheduleActions();});
     window.petAPI.onMode(v=>{
       in3d=v==='3d';if(!in3d)stopAutoAction();

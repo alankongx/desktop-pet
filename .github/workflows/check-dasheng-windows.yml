@@ -34,7 +34,7 @@ jobs:
           if ($LASTEXITCODE) { throw 'Test dependency installation failed' }
           $env:NODE_PATH = Join-Path $deps 'node_modules'
           $env:CODEX_HOME = Join-Path $env:RUNNER_TEMP 'dasheng-codex-fixture'
-          node pets/dasheng/windows/smoke.cjs
+          node pets/dasheng/test/installed.cjs
           if ($LASTEXITCODE) { throw 'Installed app checks failed' }
           $folder = Join-Path $env:LOCALAPPDATA 'Programs\DashengPet'
           $uninstall = Start-Process (Join-Path $folder 'Uninstall.exe') '/S' -Wait -PassThru

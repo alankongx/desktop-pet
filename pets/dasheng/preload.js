@@ -4,6 +4,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('petAPI', {
+  onRotationInterval: cb => ipcRenderer.on('rotation-interval', (_,ms) => cb(ms)),
   onAutoActions: cb => ipcRenderer.on('auto-actions', (_,enabled) => cb(enabled)),
   onCloudStyle: cb => ipcRenderer.on('cloud-style', (_,style) => cb(style)),
   onAction: cb => ipcRenderer.on('pet-action', (_,id) => cb(id)),

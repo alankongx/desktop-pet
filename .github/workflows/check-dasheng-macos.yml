@@ -1,0 +1,38 @@
+name: Check Dasheng macOS installer
+on:
+  workflow_dispatch:
+    inputs:
+      sha256:
+        description: SHA-256 of the published installer
+        required: true
+permissions:
+  contents: read
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install and launch the release on this Mac
+        env:
+          EXPECTED: ${{ inputs.sha256 }}
+        run: |
+          version=$(node -p "require('./pets/dasheng/package.json').version")
+          file="DashengPet-${version}-macOS-Universal.pkg"
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/$file" "https://github.com/$GITHUB_REPOSITORY/releases/download/dasheng-v${version}/$file"
+          echo "$EXPECTED  $RUNNER_TEMP/$file" | shasum -a 256 --check
+          sudo installer -pkg "$RUNNER_TEMP/$file" -target /
+          bundle="/Applications/大圣喵.app"
+          codesign --verify --deep --strict "$bundle"
+          arches=$(lipo -archs "$bundle/Contents/MacOS/DashengPet")
+          [[ "$arches" == *arm64* && "$arches" == *x86_64* ]]
+          npm install --prefix "$RUNNER_TEMP/qa" --no-audit --no-fund playwright-core@1.58.2
+          NODE_PATH="$RUNNER_TEMP/qa/node_modules" CODEX_HOME="$RUNNER_TEMP/dasheng-codex-fixture" node pets/dasheng/test/installed.cjs
+          codesign --verify --deep --strict "$bundle"

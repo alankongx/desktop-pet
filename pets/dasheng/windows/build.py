@@ -1,7 +1,7 @@
 """Build the self-contained x64 installer with Python 3 and NSIS 3."""
 import argparse
 import hashlib
-import os
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -12,13 +12,7 @@ import zipfile
 APP = Path(__file__).resolve().parents[1]
 ELECTRON = "45.3.4"
 SHA256 = "b177908b5c48dad990612d7861fc8f03f8c06be0ca3351383a83cc11dd8e9144"
-FILES = [
-    "package.json", "main.js", "preload.js", "actions.js", "codex-status.js",
-    "codex-hook.js", "codex-hook-setup.js", "renderer/index.html", "renderer/style.css",
-    "renderer/renderer.js", "renderer/pet3d.js", "renderer/model.js",
-    "renderer/vendor/three.min.js", "renderer/vendor/three.LICENSE",
-    "assets/dasheng.png", "assets/dasheng-happy.png",
-]
+FILES = json.loads((APP / "packaging-files.json").read_text(encoding="utf-8"))
 
 def main():
     parser = argparse.ArgumentParser()

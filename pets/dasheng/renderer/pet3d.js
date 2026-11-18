@@ -7,6 +7,36 @@
   const durations=Object.fromEntries(dashengActions.map(action=>[action.id,action.seconds]));
   const sin=Math.sin, pi=Math.PI;
   const staffRest=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),.325);
+  // Reference the shoulder, sleeve and palm to the torso. Converting to local
+  // joint rotations once lets the elbow carry the reach and keeps the wrist seated.
+  function torsoOrientation(x,y,z){
+    const rad=THREE.MathUtils.degToRad;
+    return new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(x),rad(y),rad(z),'ZXY'));
+  }
+  const shoulderRest=torsoOrientation(-5,-8,-8);
+  const sleeveRest=torsoOrientation(4,6,-67);
+  const palmRest=torsoOrientation(-1,2,-146);
+  const fingerAxis=new THREE.Vector3(.57,.82,0).normalize();
+  palmRest.multiply(new THREE.Quaternion().setFromAxisAngle(fingerAxis,THREE.MathUtils.degToRad(-131)));
+  const elbowRest=shoulderRest.clone().invert().multiply(sleeveRest);
+  const wristRest=sleeveRest.clone().invert().multiply(palmRest);
+  let shapeHand;
+  function poseFreeHand(rig,arm,wave,t){
+    const rest=1-wave;
+    arm.a.rotation.set(0,0,.24);
+    arm.elbow.rotation.set(.12,0,.48);
+    rig.freeWrist.rotation.set(0,0,.06+.27*sin(t*10));
+    arm.a.quaternion.slerp(shoulderRest,rest);
+    arm.elbow.quaternion.slerp(elbowRest,rest);
+    rig.freeWrist.quaternion.slerp(wristRest,rest);
+    rig.freeWrist.userData.seal.scale.set(.13-.056*rest,.12-.054*rest,.12-.056*rest);
+    const curl=.10*(1+sin(t*10))*wave;
+    rig.fingerJoints.forEach((finger,i)=>{
+      finger.rotation.set(curl*(.62+i*.15),0,0);
+      finger.userData.tip.rotation.set(curl*(.70+i*.12),0,0);
+    });
+    shapeHand(rest);
+  }
   function resize(){
     if(!renderer)return;
     const w=stage.clientWidth,h=stage.clientHeight;
@@ -86,19 +116,9 @@
       thinking?.24+.07*sin(t*2):.031*sin(t*.9),nap?-.15:thinking?.13:angry?.045*sin(t*17):.007*sin(t*1.7));
     const [left,right]=a.arms;
     left.a.rotation.set(0,0,0);left.elbow.rotation.set(0,0,0);
-    // The free arm's zero rotations register its wrist and fingertips to the portrait.
-    right.a.rotation.set(0,0,0);right.elbow.rotation.set(0,0,0);
-    a.freeWrist.rotation.set(0,0,0);
-    const greeting=action==='wave'||action==='happy';
-    const raise=greeting?weight:thinking&&!action?.35:0;
-    if(raise){
-      right.a.rotation.z=.24*raise;
-      right.elbow.rotation.set(.12*raise,0,.48*raise);
-      a.freeWrist.rotation.z=(.06+.27*sin(t*10))*raise;
-    }
-    const curl=nap?.27:angry?.36:raise?.12*(1+sin(t*10)):0;
-    a.fingerJoints.forEach((finger,i)=>{finger.rotation.x=curl*(.68+i*.10);});
-    if(busy){right.elbow.rotation.x=.05*sin(t*4);right.a.rotation.z=.015*sin(t*4);}
+    // Non-greeting actions share A throughout, including the middle of the animation.
+    poseFreeHand(a,right,action==='wave'?weight:0,t);
+    if(busy){right.elbow.rotateX(.035*sin(t*4));right.a.rotateZ(.012*sin(t*4));}
     // Counter-rotate the wrist so the staff points upright in its resting pose.
     if(action==='staff'||action==='angry'){
       left.a.rotation.x-=weight*.49;
@@ -146,7 +166,7 @@
   }
   function fallback(){failed=true;root.classList.remove('three-ready');clearTimeout(previous);cancelAnimationFrame(timer);}
   async function init(){
-    const imgs=await Promise.all(['dasheng.png','dasheng-happy.png'].map(async name=>{
+    const imgs=await Promise.all(['dasheng.png','dasheng-happy.png','glove-a.png'].map(async name=>{
       const img=new Image();img.src='../assets/'+name;await img.decode();return img;
     }));
     const T=window.THREE;
@@ -165,7 +185,7 @@
     ctx.fillStyle=grad;ctx.fillRect(0,0,256,128);ctx.fillStyle='#ffffff';
     ctx.fillRect(22,18,33,51);ctx.fillRect(145,25,40,30);ctx.fillRect(215,33,8,52);
     const env=new T.CanvasTexture(envCanvas);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;scene.environment=env;
-    actor=buildDasheng(T,imgs);scene.add(actor.root,actor.cloud);frame();
+    actor=buildDasheng(T,imgs);shapeHand=bindRelaxedHand(T,actor,imgs[2],palmRest);scene.add(actor.root,actor.cloud);frame();
   }
   new ResizeObserver(resize).observe(stage);
   document.addEventListener('visibilitychange',frame);

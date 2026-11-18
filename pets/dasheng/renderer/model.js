@@ -6,7 +6,7 @@ function buildDasheng(T,pictures){
     bright=metal(0xefbb68,.56),bronze=metal(0x735133,.52),alloy=metal(0x9a9287,.55),
     dark=metal(0x332e29,.35),leather=metal(0x5b3926,.24),jade=metal(0x209e94,.33);
   function metal(color,metalness){return new T.MeshStandardMaterial({color,metalness,roughness:.43,side:T.DoubleSide});}
-  const faces=pictures.map(img=>{const t=new T.Texture(img);t.colorSpace=T.SRGBColorSpace;t.needsUpdate=true;return t;});
+  const faces=pictures.slice(0,2).map(img=>{const t=new T.Texture(img);t.colorSpace=T.SRGBColorSpace;t.needsUpdate=true;return t;});
   function painted(map){return new T.MeshBasicMaterial({map,alphaTest:.22,side:T.DoubleSide});}
   const paint=painted(faces[0]),visor=painted(faces[0]);
   const root=new T.Group();root.userData.bind=[240,480,0];
@@ -198,7 +198,7 @@ function buildDasheng(T,pictures){
     hull(shin,data.slice(split),0,21,leather);
     const cuff=new T.TorusGeometry(.168,.016,8,32);const trim=mesh(shin,cuff,bronze);trim.rotation.x=Math.PI/2;trim.position.set(...local(shin,x,444,-2));
   }
-  const arms=[],fingerJoints=[];let freeWrist;
+  const arms=[],fingerJoints=[],gloveParts={fingers:[]};let freeWrist;
   for(const s of [-1,1]){
     const left=s<0;
     const a=group(body,left?192:322,294,6),elbow=group(a,left?161:352,327,12);arms.push({a,elbow});
@@ -210,16 +210,45 @@ function buildDasheng(T,pictures){
       hull(elbow,[[308,142,163,.46],[313,130,169,.84],[324,128,175,1],[337,131,174,1],[346,138,165,.77],[350,151,160,.3]],18,18,bronze);
       hull(elbow,[[308,118,125,.33],[313,112,133,.85],[320,103,137,1],[331,103,138,1],[341,107,134,.92],[350,113,130,.69],[354,118,123,.26]],29,13,alloy);
     }else{
-      hull(elbow,[[307,354,369,.3],[312,342,373,.79],[322,338,377,1],[334,340,371,1],[344,347,363,.72],[347,351,358,.34]],18,17,bronze);
+      // A cylindrical sleeve carries just the gold brocade. Its socket stays under
+      // the wrist when the forearm turns, with no fingers painted onto the cuff.
+      const start=new T.Vector3(...local(elbow,343,334,12));
+      const end=new T.Vector3(...local(elbow,368,327,25));
+      const axis=end.clone().sub(start);
+      const cuff=new T.Group();elbow.add(cuff);
+      cuff.position.copy(start);
+      cuff.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),axis.clone().normalize());
+      const height=axis.length(), profile=[[.14,0],[.168,.10],[.178,.39],[.18,.78],[.168,1]];
+      const brocade=new T.MeshStandardMaterial({map:faces[0],metalness:.15,roughness:.62});
+      const shell=mesh(cuff,new T.LatheGeometry(profile.map(([r,t])=>new T.Vector2(r,t*height)),48),brocade);
+      const uv=shell.geometry.attributes.uv;
+      for(let i=0;i<uv.count;i++){
+        // Mirror a strip of the other sleeve's brocade around the circumference.
+        const wrap=(uv.getX(i)*2)%1,t=uv.getY(i);
+        const x=164-17*t,y=315+24*(1-Math.abs(wrap*2-1));
+        uv.setXY(i,x/480,1-y/480);
+      }
+      for(const [at,r] of [[.03,.149],[.94,.168]]){
+        const rim=mesh(cuff,new T.TorusGeometry(r,.012,8,40),gold);
+        rim.position.y=at*height;rim.rotation.x=Math.PI/2;
+      }
+      for(const [y,r] of [[.012,.144],[height-.014,.163]]){
+        const endCap=mesh(cuff,new T.CylinderGeometry(r,r,.032,40),bronze);
+        endCap.position.y=y;
+      }
+      const wristSeal=orb(elbow,dark,368,327,25,13,12,12);
       // Closed volumes share the original portrait's coordinates and front texture.
       // The black wrist seal overlaps the cuff when the hand waves.
-      freeWrist=group(elbow,374,335,24);
-      hull(freeWrist,[[307,375,379,.48],[309,370,385,.65],[312,363,390,.88],
+      freeWrist=group(elbow,368,327,25);
+      const thumb=group(freeWrist,369,330,31);
+      freeWrist.userData.seal=wristSeal;
+      const gloveBack=alloy.clone();
+      gloveParts.palm=hull(freeWrist,[[307,375,379,.48],[309,370,385,.65],[312,363,390,.88],
         [316,362,398,1],[320,363,402,1],[323,364,404,.95],[328,365,400,.94],
-        [333,367,396,.87],[337,370,391,.69],[340,374,385,.44],[342,378,382,.2]],28,10,alloy);
-      hull(freeWrist,[[305,360,363,.2],[307,359,366,.64],[311,359,368,.96],
+        [333,367,396,.87],[337,370,391,.69],[340,374,385,.44],[342,378,382,.2]],28,10,gloveBack);
+      gloveParts.thumb=hull(thumb,[[305,360,363,.2],[307,359,366,.64],[311,359,368,.96],
         [315,359,370,1],[319,361,373,.97],[324,362,378,.86],[329,364,378,.7],
-        [333,368,376,.42]],34,6,alloy);
+        [333,368,376,.42]],34,6,gloveBack);
       const fingers=[
         [[288,387,394,.32],[290,384,397,.74],[293,382,396,.98],[297,380,393,1],
          [302,378,390,1],[307,375,386,.96],[310,373,383,.78],[313,371,379,.3]],
@@ -233,7 +262,13 @@ function buildDasheng(T,pictures){
       for(const rows of fingers){
         const [baseY,leftX,rightX]=rows.at(-1);
         const finger=group(freeWrist,(leftX+rightX)/2,baseY,30);
-        hull(finger,rows,30,5,alloy);
+        const hingeRow=rows[3],hingeY=hingeRow[0];
+        const tip=group(finger,(hingeRow[1]+hingeRow[2])/2,hingeY,30);
+        gloveParts.fingers.push([
+          hull(finger,rows.slice(3),30,5,gloveBack),
+          hull(tip,rows.slice(0,4),30,5,gloveBack),
+        ]);
+        finger.userData.tip=tip;
         fingerJoints.push(finger);
       }
     }
@@ -329,5 +364,5 @@ function buildDasheng(T,pictures){
     }
     curl(edgeGold,points,u=>.034*(1-.55*u));
   }
-  return {root,body,head,arms,freeWrist,fingerJoints,legs,staff,wind,windMaterials,cape,feathers,visor,faces,sleepFace,cloud,cloudTail};
+  return {root,body,head,arms,freeWrist,fingerJoints,gloveParts,legs,staff,wind,windMaterials,cape,feathers,visor,faces,sleepFace,cloud,cloudTail};
 }

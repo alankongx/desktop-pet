@@ -1,0 +1,20 @@
+[
+  "package.json",
+  "main.js",
+  "preload.js",
+  "actions.js",
+  "codex-status.js",
+  "codex-hook.js",
+  "codex-hook-setup.js",
+  "renderer/index.html",
+  "renderer/style.css",
+  "renderer/renderer.js",
+  "renderer/pet3d.js",
+  "renderer/relaxed-hand.js",
+  "renderer/model.js",
+  "renderer/vendor/three.min.js",
+  "renderer/vendor/three.LICENSE",
+  "assets/dasheng.png",
+  "assets/dasheng-happy.png",
+  "assets/glove-a.png"
+]
