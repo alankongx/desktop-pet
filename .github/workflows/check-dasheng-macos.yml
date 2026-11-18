@@ -23,6 +23,7 @@ jobs:
       - name: Install and launch the release on this Mac
         env:
           EXPECTED: ${{ inputs.sha256 }}
+          DASHENG_CHECK_GPU_FALLBACK: ${{ matrix.runner == 'macos-15-intel' && '1' || '0' }}
         run: |
           version=$(node -p "require('./pets/dasheng/package.json').version")
           file="DashengPet-${version}-macOS-Universal.pkg"
@@ -31,6 +32,7 @@ jobs:
           sudo installer -pkg "$RUNNER_TEMP/$file" -target /
           bundle="/Applications/大圣喵.app"
           codesign --verify --deep --strict "$bundle"
+          system_profiler SPDisplaysDataType
           arches=$(lipo -archs "$bundle/Contents/MacOS/DashengPet")
           [[ "$arches" == *arm64* && "$arches" == *x86_64* ]]
           npm install --prefix "$RUNNER_TEMP/qa" --no-audit --no-fund playwright-core@1.58.2

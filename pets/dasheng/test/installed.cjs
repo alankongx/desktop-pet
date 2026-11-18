@@ -73,7 +73,28 @@ async function run(){
   const launch=()=>_electron.launch({executablePath:exe,args:['--user-data-dir='+profile,...(mac ? [] : ['--use-angle=swiftshader','--enable-unsafe-swiftshader'])],timeout:60000});
   const app=await launch();
   try{
-    const page=await app.firstWindow();await page.waitForSelector('#pet-root.three-ready',{timeout:45000});
+    const page=await app.firstWindow();
+    await page.waitForFunction(()=>window.dasheng3d && window.petAPI);
+    const capability=await page.evaluate(()=>{
+      const canvas=document.createElement('canvas');
+      const gl=canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if(!gl) return null;
+      const name=gl.getParameter(gl.RENDERER);
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
+      return name;
+    });
+    const fallback=!capability && process.env.DASHENG_CHECK_GPU_FALLBACK==='1';
+    console.log('WebGL context',capability);
+    if(fallback){
+      console.log('Host GPU features',await app.evaluate(({app})=>app.getGPUFeatureStatus()));
+      await page.waitForFunction(()=>{
+        const img=document.querySelector('#dasheng');
+        return img?.complete && img.naturalWidth>0 && getComputedStyle(img).display!=='none'
+          && !document.querySelector('#pet-root').classList.contains('three-ready');
+      });
+    }else{
+      await page.waitForSelector('#pet-root.three-ready',{timeout:45000});
+    }
     await waitForText(page,'#codex-state','工作中');
     await page.evaluate(()=>{
       const update=THREE.Scene.prototype.updateMatrixWorld;
@@ -89,7 +110,7 @@ async function run(){
     const handPose=rest=>page.waitForFunction(rest=>window.handMeshes?.length===10 &&
       window.handMeshes.every(mesh=>rest ? mesh.morphTargetInfluences[0]>.98 : mesh.morphTargetInfluences[0]<.05),
       rest,{timeout:4000});
-    await handPose(true);
+    if(!fallback) await handPose(true);
     await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.send('auto-actions',false));
     for(const action of defs){
       const labels=await app.evaluate(({Menu,BrowserWindow},label)=>{
@@ -104,7 +125,7 @@ async function run(){
       },action.label);
       assert.deepEqual(labels,defs.map(item=>item.label));
       await waitForText(page,'#speech-text',action.speech[0]);
-      if(action.id==='wave' || action.id==='nap') await handPose(action.id==='nap');
+      if(!fallback && (action.id==='wave' || action.id==='nap')) await handPose(action.id==='nap');
       console.log('menu/renderer',action.label,action.speech[0]);
     }
     const wave=defs.find(a=>a.id==='wave'), cloud=defs.find(a=>a.id==='cloud');
@@ -125,8 +146,13 @@ async function run(){
       fs.rmSync(path.join(dir,'dasheng-pet',id+'.notice'));
     }
     hooks.configure(false);assert(!hooks.registered());
-    await checkRotation(app,page);
-    console.log('3D, nine actions, both Codex notifications and all three rotation intervals passed');
+    if(fallback){
+      await selectMenu(app,'轮播速度','慢 · 60 秒');
+      console.log('Verified classic artwork on a host without WebGL, nine menu actions and both Codex notifications');
+    }else{
+      await checkRotation(app,page);
+      console.log('3D, nine actions, both Codex notifications and all three rotation intervals passed');
+    }
    }finally{await app.close();}
   const reopened=await launch();
   try{
