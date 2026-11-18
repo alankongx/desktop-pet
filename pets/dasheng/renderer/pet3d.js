@@ -6,6 +6,23 @@
   let action='', start=0, duration=0, mood='default', status='idle';
   const durations=Object.fromEntries(dashengActions.map(action=>[action.id,action.seconds]));
   const sin=Math.sin, pi=Math.PI;
+  const V=THREE.Vector3,Q=THREE.Quaternion,E=THREE.Euler;
+  const zAxis=new V(0,0,1),upperIdle=new Q(),lowerIdle=new Q(),wristIdle=new Q();
+  function prepareIdleHand(rig){
+    const free=rig.arms[1],holding=rig.arms[0];
+    upperIdle.setFromEuler(new E(-.34,-.50,0,'ZXY'));
+    lowerIdle.setFromEuler(new E(-.20,-.12,-.30,'ZXY'));
+    const reach=rig.freeWrist.position.clone().applyQuaternion(lowerIdle)
+      .add(free.elbow.position).applyQuaternion(upperIdle);
+    const gripY=holding.a.position.y+holding.elbow.position.y+rig.staff.position.y;
+    const rise=(gripY-free.a.position.y)/Math.hypot(reach.x,reach.y);
+    const roll=Math.asin(THREE.MathUtils.clamp(rise,-1,1))-Math.atan2(reach.y,reach.x);
+    upperIdle.premultiply(new Q().setFromAxisAngle(zAxis,roll));
+    // Align the palm independently of the arm: fingers toward screen left, palm toward +Z.
+    const palm=new Q().setFromEuler(new E(0,pi,-pi/2,'ZYX'));
+    wristIdle.copy(upperIdle).multiply(lowerIdle).invert().multiply(palm);
+  }
+
   const staffRest=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),.325);
   function resize(){
     if(!renderer)return;
@@ -115,6 +132,13 @@
       a.head.rotation.y-=.045*power;
       right.a.rotation.z+=.17*power;
     }
+    const restWeight=nap||thinking?0:1-weight;
+    if(restWeight>0){
+      right.a.quaternion.slerp(upperIdle,restWeight);
+      right.elbow.quaternion.slerp(lowerIdle,restWeight);
+      a.freeWrist.quaternion.slerp(wristIdle,restWeight);
+      for(const finger of a.fingerJoints)finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,-.55,restWeight);
+    }
     a.staff.quaternion.copy(left.a.quaternion).multiply(left.elbow.quaternion).invert().multiply(staffRest);
     if(action==='staff')a.staff.rotateX(2*pi*(progress-sin(2*pi*progress)/(2*pi)));
     if(action==='angry')a.staff.rotateX(weight*.4*sin(elapsed*8));
@@ -168,7 +192,7 @@
     ctx.fillStyle=grad;ctx.fillRect(0,0,256,128);ctx.fillStyle='#ffffff';
     ctx.fillRect(22,18,33,51);ctx.fillRect(145,25,40,30);ctx.fillRect(215,33,8,52);
     const env=new T.CanvasTexture(envCanvas);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;scene.environment=env;
-    actor=buildDasheng(T,imgs);scene.add(actor.root,actor.cloud);frame();
+    actor=buildDasheng(T,imgs);prepareIdleHand(actor);scene.add(actor.root,actor.cloud);frame();
   }
   new ResizeObserver(resize).observe(stage);
   document.addEventListener('visibilitychange',frame);
