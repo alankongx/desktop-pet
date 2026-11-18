@@ -18,7 +18,7 @@
 
 ## Windows 一键安装
 
-Windows 10/11 x64 用户从 [GitHub Release](https://github.com/alankongx/desktop-pet/releases/tag/dasheng-v2.2.1) 下载 DashengPet-2.2.1-Windows-x64-Setup.exe，双击安装后自动启动。安装包内含运行环境，无需 Node.js、管理员权限或 Codex。再次启动可用桌面或开始菜单快捷方式，卸载可用系统的应用列表。
+Windows 10/11 x64 用户从 [GitHub Release](https://github.com/alankongx/desktop-pet/releases/tag/dasheng-v2.2.2) 下载 DashengPet-2.2.2-Windows-x64-Setup.exe，双击安装后自动启动。安装包内含运行环境，无需 Node.js、管理员权限或 Codex。再次启动可用桌面或开始菜单快捷方式，卸载可用系统的应用列表。
 
 ## 特性
 - 真·系统级悬浮窗（透明、无边框、置顶、跨屏可见）

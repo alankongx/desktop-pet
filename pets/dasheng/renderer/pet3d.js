@@ -40,27 +40,23 @@
     a.cloud.visible=flying;
     a.root.position.x=0;a.root.position.z=0;a.root.rotation.order='YXZ';a.root.rotation.x=0;a.root.rotation.z=0;a.root.scale.setScalar(1);
     canvas.style.opacity='1';
-    // Pitch forward in the direction of travel, around the hips, while facing left.
-    let tuck=0;
-    const launch=flying?Math.sin(pi*ease(progress/.16)):0;
-    function somersault(x,height,size,flip,facing){
-      const pitch=2*pi*flip,yaw=-1.25*facing,pivot=2.12*size;
-      tuck=Math.sin(pi*flip);
-      a.root.rotation.y+=yaw;a.root.rotation.x=pitch;
-      a.root.position.x=x-pivot*Math.sin(a.root.rotation.y)*sin(pitch);
-      a.root.position.z=-pivot*Math.cos(a.root.rotation.y)*sin(pitch);
-      a.root.position.y+=height+pivot*(1-Math.cos(pitch))-.06*launch;
+    // The original silhouette turn reads as a clean somersault at desktop size.
+    function somersault(x,height,size,turn){
+      const angle=2*pi*turn,pivot=2.12*size;
+      a.root.rotation.z=angle;
+      a.root.position.x=x+pivot*sin(angle);
+      a.root.position.y+=height+pivot*(1-Math.cos(angle));
     }
     if(flying && cloudStyle==='glide'){
       const land=.57;
-      const flip=ease((progress-.18)/(land-.18));
+      const flip=ease((progress-.10)/(land-.10));
       const rise=ease(progress/.14),settle=1-ease((progress-.83)/.17);
       const ride=rise*settle;
       const hop=.85*Math.sin(pi*ease((progress-.04)/(land-.04)));
       const glide=ease((progress-land)/.25);
       const x=-1.50*glide*(1-ease((progress-.84)/.16));
       const floor=.52*ride;
-      somersault(x,floor+hop,1,flip,ease(progress/.18)*(1-ease((progress-.64)/.30)));
+      somersault(x,floor+hop,1,flip);
       const appear=ease((progress-.20)/.30)*settle;
       a.cloud.scale.set(-appear,appear,appear);
       const impact=.095*Math.sin(pi*ease((progress-.55)/.10));
@@ -71,11 +67,11 @@
       a.cloudTail.scale.x=1;
       const summon=ease(progress/.16), flight=ease((progress-.12)/.71);
       const size=1-.96*flight;
-      const flip=ease((progress-.19)/.38);
+      const flip=ease((progress-.16)/.57);
       const x=-4.34*flight;
       const altitude=.46*summon+4.44*flight+.36*sin(pi*flight);
       a.root.scale.setScalar(size);
-      somersault(x,altitude,size,flip,ease(progress/.17));
+      somersault(x,altitude,size,flip);
       const puffSize=Math.max(.001,summon*size);
       a.cloud.scale.set(-puffSize,puffSize,puffSize);
       a.cloud.position.set(x,altitude-.16*size,.02);
@@ -104,12 +100,7 @@
       a.freeWrist.rotation.y+=v*2.62;
       right.elbow.rotation.x+=.35*v;
     }
-    a.fingerJoints.forEach((finger,i)=>{finger.rotation.x=(.35+i*.10)*(1-openPalm)+.39*tuck-.46*openPalm;});
-    if(flying){
-      a.body.rotation.x+=.26*tuck+.20*launch;a.head.rotation.x+=.22*tuck;
-      left.a.rotation.x-=.35*tuck;right.a.rotation.x-=.45*tuck;
-      right.elbow.rotation.x-=.78*tuck;right.elbow.rotation.z+=.2*launch;
-    }
+    a.fingerJoints.forEach((finger,i)=>{finger.rotation.x=(.35+i*.10)*(1-openPalm)-.46*openPalm;});
     if(busy) {right.elbow.rotation.x-=.38+.30*sin(t*4);right.a.rotation.z+=.14*sin(t*4);}
     // Counter-rotate the wrist so the staff points upright in its resting pose.
     if(action==='staff'||action==='angry'){
@@ -139,8 +130,8 @@
     for(const [i,f] of a.feathers.entries())f.rotation.z=(i?1:-1)*(.025*sin(t*2.4)+(action==='turn'?weight*.11:0));
     a.cape.rotation.x=(flying?.18*weight:-.04)+.045*sin(t*2)+(action==='turn'?weight*.29:0);
     a.legs.forEach((leg,i)=>{
-      leg.rotation.x=action==='turn'?weight*.24*sin(elapsed*9+i*pi):-(.79+i*.18)*tuck-.32*launch;
-      leg.userData.knee.rotation.x=1.13*tuck+.54*launch;
+      leg.rotation.x=action==='turn'?weight*.24*sin(elapsed*9+i*pi):0;
+      leg.userData.knee.rotation.x=0;
     });
     const texture=nap?a.sleepFace:mood==='happy'||action==='happy'?a.faces[1]:a.faces[0];
     a.visor.map=texture;a.visor.color.setHex(angry?0xff624c:0xffffff);

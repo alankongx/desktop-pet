@@ -1,6 +1,6 @@
 {
   "name": "dasheng-pet",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "大圣喵 3D 桌宠，支持经典原画和本机 Codex 状态联动",
   "main": "main.js",
   "scripts": {
