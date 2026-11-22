@@ -13,6 +13,7 @@ if (process.platform === 'win32') {
 }
 if ((process.platform === 'win32' || app.isPackaged) && !app.requestSingleInstanceLock()) app.exit(0);
 
+const knightScenes = {wave:'骑士致意', staff:'佩剑', grow:'龙纹盾', vortex:'甲片轻响', turn:'巡查', nap:'换岗小憩', happy:'欢喜', angry:'警戒', cloud:'小龙望风'};
 let win = null;
 
 // ============ 三档尺寸表 ============
@@ -153,14 +154,15 @@ function createWindow() {
       click: () => win.webContents.send('apply-size', s),
     }));
     const menu = Menu.buildFromTemplate([
-      { label:'做个动作', submenu:require('./actions').map(({id,label})=>({
-        label,click:()=>win.webContents.send('pet-action',id)
+      { label:config.mode === 'dragon-knight' ? '骑士旁白' : config.mode === 'dasheng-official' ? '大圣旁白' : '做个动作', submenu:require('./actions').map(({id,label})=>({
+        label:config.mode === 'dragon-knight' ? knightScenes[id] : label,
+        click:()=>win.webContents.send('pet-action',id)
       })) },
-      { label:'筋斗云样式', submenu:[['depart','翻筋斗飞远'],['glide','接云滑行']].map(([id,label])=>({
+      { label:'筋斗云样式', visible:!['dragon-knight','dasheng-official'].includes(config.mode), submenu:[['depart','翻筋斗飞远'],['glide','接云滑行']].map(([id,label])=>({
         label,type:'radio',checked:(config.cloudStyle || 'depart')===id,
         click:()=>{saveSetting('cloudStyle',id);win.webContents.send('cloud-style',id);win.webContents.send('pet-action','cloud');}
       })) },
-      { label: '形象', submenu: [['3d','3D 大圣'],['classic','经典原画']].map(([id,label]) => ({
+      { label: '形象', submenu: [['3d','3D 大圣'],['classic','经典原画'],['dasheng-official','大圣·官方动态'],['dragon-knight','龙焰骑士']].map(([id,label]) => ({
         label, type:'radio', checked:(config.mode || '3d') === id,
         click:() => {saveSetting('mode',id); win.webContents.send('pet-mode',id);}
       })) },

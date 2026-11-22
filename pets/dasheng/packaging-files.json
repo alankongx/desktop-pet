@@ -16,5 +16,10 @@
   "renderer/vendor/three.LICENSE",
   "assets/dasheng.png",
   "assets/dasheng-happy.png",
-  "assets/glove-a.png"
+  "assets/glove-a.png",
+  "knight-lines.js",
+  "renderer/official-staff.js",
+  "assets/dasheng-official.png",
+  "assets/dragon-knight.png",
+  "assets/official-model-front.png"
 ]

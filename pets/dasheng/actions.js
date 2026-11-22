@@ -2,7 +2,7 @@
 
 const dashengActions = [
   {id:'wave', label:'挥挥手', mood:'default', seconds:2.3, speech:['嘿，这边！俺在呢。','见着你啦，招个手！']},
-  {id:'staff', label:'耍金箍棒', mood:'default', seconds:2.8, speech:['老伙计，走一招！','瞧这棒，使着真顺手。']},
+  {id:'staff', label:'耍金箍棒', mood:'default', seconds:3, speech:['老伙计，走一招！','瞧这棒，使着真顺手。']},
   {id:'grow', label:'金箍棒变大', mood:'default', seconds:3.9, speech:['如意金箍棒，再长些！','大，大，大！这才趁手。']},
   {id:'vortex', label:'耍棍花', mood:'default', seconds:5.1, speech:['看俺老孙耍个棍花！']},
   {id:'turn', label:'转一圈', mood:'default', seconds:3, speech:['转个身，瞧瞧俺的披风！','兜一圈，给披风透透风。']},

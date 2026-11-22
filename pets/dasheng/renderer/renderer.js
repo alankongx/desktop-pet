@@ -110,13 +110,21 @@
     }
   }
 
-  const phrases = {
+  const skins = {
+    'dragon-knight': {file: 'dragon-knight.png', label: '龙焰骑士'},
+    'dasheng-official': {file: 'dasheng-official.png', label: '大圣·官方动态'},
+  };
+  const animatedImage = document.getElementById('animated-pet');
+  let animatedSkin = null;
+  let knight = false;
+  const classicPhrases = {
     idle: ['俺在桌角歇歇脚。','花果山的桃，该熟了吧？','这桌角，正好搁俺的棒。'],
     thinking: ['咦，桃核能种出蟠桃吗？','让俺挠挠头，想一想。'],
     calm: ['笑够啦，歇口气。','好，俺坐稳了。'],
     hide: ['猜猜俺藏哪儿了？','待俺使个隐身法！'],
     back: ['嘿！俺在这儿呢。','瞧，俺又现身啦！'],
   };
+  let phrases = classicPhrases;
   const statusLabels = {working:'工作中', waiting:'等待中', input:'等你确认', done:'已完成',
     interrupted:'已中断', failed:'出错了', idle:'待机', offline:'未连接'};
   const statusSpeech = {
@@ -135,6 +143,10 @@
     return lines[index];
   }
   let cloudStyle='depart', currentStatusLine='';
+  function statusLine(state) {
+    const lines = (knight ? knightLines.status : statusSpeech)[state];
+    return lines ? nextLine(lines) : '';
+  }
   function restoreSpeech(){
     setSpeech(currentStatusLine||nextLine(phrases.idle));
   }
@@ -144,10 +156,10 @@
   const attentionStates=['input','waiting','failed','done','interrupted'];
   function scheduleActions(){
     clearTimeout(autoTimer);
-    if(!autoEnabled || !in3d || document.hidden)return;
+    if(!autoEnabled || (!in3d && !animatedSkin) || document.hidden)return;
     autoTimer=setTimeout(()=>{
       if(Date.now()>=manualUntil && !isDragging && !root.classList.contains('hidden-pet')
-        && root.classList.contains('three-ready') && !attentionStates.includes(codexState)){
+        && (animatedSkin || root.classList.contains('three-ready')) && !attentionStates.includes(codexState)){
         playAction(dashengActions[nextActionIndex].id,true);
         nextActionIndex=(nextActionIndex+1)%dashengActions.length;
       }
@@ -165,7 +177,7 @@
     clearTimeout(speechRestore);
     autoPlaying=automatic;
     if(!automatic){manualUntil=Date.now()+duration;scheduleActions();}
-    const lines=id==='cloud' && cloudStyle==='glide'?item.glideSpeech:item.speech;
+    const lines=knight ? knightLines.actions[id] : id==='cloud' && cloudStyle==='glide'?item.glideSpeech:item.speech;
     setMood(item.mood,duration);setSpeech(nextLine(lines));window.dasheng3d?.play(id);
     speechRestore=setTimeout(()=>{
       autoPlaying=false;
@@ -186,12 +198,31 @@
     });
     window.petAPI.onAutoActions(v=>{autoEnabled=v;if(!v)stopAutoAction();scheduleActions();});
     window.petAPI.onMode(v=>{
+      const previousSkin = animatedSkin;
+      animatedSkin = skins[v] || null;
+      if (animatedSkin && previousSkin !== animatedSkin) {
+        animatedImage.src = '../assets/' + animatedSkin.file;
+        animatedImage.alt = animatedSkin.label;
+      } else if (!animatedSkin) {
+        animatedImage.removeAttribute('src');
+      }
+      knight = v === 'dragon-knight';
+      phrases = knight ? knightLines : classicPhrases;
+      root.classList.toggle('animated-skin', Boolean(animatedSkin));
+      if (previousSkin !== animatedSkin) {
+        clearTimeout(speechRestore);
+        autoPlaying = false;
+        manualUntil = 0;
+        setMood('default');
+        currentStatusLine = statusLine(codexState);
+        setSpeech(currentStatusLine || (knight ? knightLines.welcome : nextLine(phrases.idle)));
+      }
       in3d=v==='3d';if(!in3d)stopAutoAction();
       window.dasheng3d?.enable(in3d);scheduleActions();
     });
     window.petAPI.onCodex(state=>{
       codexState=state;
-      currentStatusLine=statusSpeech[state]?nextLine(statusSpeech[state]):'';
+      currentStatusLine=statusLine(state);
       const badge=document.getElementById('codex-state');
       badge.hidden=!statusLabels[state];badge.dataset.state=state;
       badge.textContent=badge.hidden?'':'Codex · '+statusLabels[state];
@@ -310,7 +341,7 @@
   function scheduleIdle() {
     const next = 40000 + Math.random() * 40000;
     setTimeout(() => {
-      if ((autoEnabled && in3d && root.classList.contains('three-ready')) || autoPlaying || Date.now() < manualUntil || !['idle','off','offline'].includes(codexState)) { scheduleIdle(); return; }
+      if ((autoEnabled && (in3d || animatedSkin) && (animatedSkin || root.classList.contains('three-ready'))) || autoPlaying || Date.now() < manualUntil || !['idle','off','offline'].includes(codexState)) { scheduleIdle(); return; }
       const options=['thinking','happy','turn','angry','nap'];
       const choice=options[Math.floor(Math.random()*options.length)];
       if(choice==='thinking'){

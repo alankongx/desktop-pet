@@ -4,6 +4,8 @@
 
 > 它不是 WorkBuddy 专属功能 —— 只是一个普通的 Electron 小程序，跟聊天工具无关。
 
+右键打开「形象」，可以选择 3D 大圣、经典原画、大圣·官方动态或龙焰骑士。龙焰骑士使用专属气泡旁白。
+
 ## 3D 桌面版
 
 单击挥手，双击切换开怀表情。右键打开「做个动作」，可以挥手、耍金箍棒、金箍棒变大、耍棍花、转圈、打盹、开怀大笑、变红发怒或驾筋斗云。「形象」可以切回经典原画。拖动可移动桌宠，右键「尺寸」可放大。
@@ -18,7 +20,7 @@
 
 ## Mac 一键安装
 
-从 [GitHub Release](https://github.com/alankongx/desktop-pet/releases/tag/dasheng-v2.2.5) 下载 DashengPet-2.2.5-macOS-Universal.pkg，双击安装，再到「应用程序」打开「大圣喵」。同一个安装包支持 macOS 13 或以上的 Apple 芯片和 Intel Mac，内含运行环境。首次安装可能出现开发者验证提示，此版本未作 Apple 公证。
+从 [GitHub Release](https://github.com/alankongx/desktop-pet/releases/tag/dasheng-v2.2.10) 下载 DashengPet-2.2.10-macOS-Universal.pkg，双击安装，再到「应用程序」打开「大圣喵」。同一个安装包支持 macOS 13 或以上的 Apple 芯片和 Intel Mac，内含运行环境。首次安装可能出现开发者验证提示，此版本未作 Apple 公证。
 
 ## Windows 一键安装
 

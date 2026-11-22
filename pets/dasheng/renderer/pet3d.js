@@ -7,35 +7,18 @@
   const durations=Object.fromEntries(dashengActions.map(action=>[action.id,action.seconds]));
   const sin=Math.sin, pi=Math.PI;
   const staffRest=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),.325);
-  // Reference the shoulder, sleeve and palm to the torso. Converting to local
-  // joint rotations once lets the elbow carry the reach and keeps the wrist seated.
-  function torsoOrientation(x,y,z){
-    const rad=THREE.MathUtils.degToRad;
-    return new THREE.Quaternion().setFromEuler(new THREE.Euler(rad(x),rad(y),rad(z),'ZXY'));
-  }
-  const shoulderRest=torsoOrientation(-5,-8,-8);
-  const sleeveRest=torsoOrientation(4,6,-67);
-  const palmRest=torsoOrientation(-1,2,-146);
-  const fingerAxis=new THREE.Vector3(.57,.82,0).normalize();
-  palmRest.multiply(new THREE.Quaternion().setFromAxisAngle(fingerAxis,THREE.MathUtils.degToRad(-131)));
-  const elbowRest=shoulderRest.clone().invert().multiply(sleeveRest);
-  const wristRest=sleeveRest.clone().invert().multiply(palmRest);
-  let shapeHand;
+  let officialStaff;
   function poseFreeHand(rig,arm,wave,t){
-    const rest=1-wave;
-    arm.a.rotation.set(0,0,.24);
-    arm.elbow.rotation.set(.12,0,.48);
-    rig.freeWrist.rotation.set(0,0,.06+.27*sin(t*10));
-    arm.a.quaternion.slerp(shoulderRest,rest);
-    arm.elbow.quaternion.slerp(elbowRest,rest);
-    rig.freeWrist.quaternion.slerp(wristRest,rest);
-    rig.freeWrist.userData.seal.scale.set(.13-.056*rest,.12-.054*rest,.12-.056*rest);
+    // The bind mesh is traced from the raised open palm in the official frame.
+    // Add the wave relative to that pose so the palm, thumb and cuff stay joined.
+    arm.a.rotation.set(0,0,.24*wave);
+    arm.elbow.rotation.set(.12*wave,0,.48*wave);
+    rig.freeWrist.rotation.set(0,0,(.06+.27*sin(t*10))*wave);
     const curl=.10*(1+sin(t*10))*wave;
     rig.fingerJoints.forEach((finger,i)=>{
       finger.rotation.set(curl*(.62+i*.15),0,0);
       finger.userData.tip.rotation.set(curl*(.70+i*.12),0,0);
     });
-    shapeHand(rest);
   }
   function resize(){
     if(!renderer)return;
@@ -120,7 +103,7 @@
     poseFreeHand(a,right,action==='wave'?weight:0,t);
     if(busy){right.elbow.rotateX(.035*sin(t*4));right.a.rotateZ(.012*sin(t*4));}
     // Counter-rotate the wrist so the staff points upright in its resting pose.
-    if(action==='staff'||action==='angry'){
+    if(action==='angry'){
       left.a.rotation.x-=weight*.49;
       left.a.rotation.z-=weight*(.20+.13*sin(elapsed*7));
       a.body.rotation.y=weight*.22*sin(elapsed*4);
@@ -133,7 +116,6 @@
       right.a.rotation.z+=.17*power;
     }
     a.staff.quaternion.copy(left.a.quaternion).multiply(left.elbow.quaternion).invert().multiply(staffRest);
-    if(action==='staff')a.staff.rotateX(2*pi*(progress-sin(2*pi*progress)/(2*pi)));
     if(action==='angry')a.staff.rotateX(weight*.4*sin(elapsed*8));
     a.staff.scale.set(1+power*1.47,1+power*1.236,1+power*1.47);
     if(action==='vortex'){
@@ -152,6 +134,8 @@
     });
     const texture=nap?a.sleepFace:mood==='happy'||action==='happy'?a.faces[1]:a.faces[0];
     a.visor.map=texture;a.visor.color.setHex(angry?0xff624c:0xffffff);
+    a.cape.rotation.z=0;
+    if(action==='staff')officialStaff(progress,weight);
     canvas.classList.toggle('rage',angry);renderer.render(scene,camera);
     if(!root.classList.contains('three-ready'))root.classList.add('three-ready');
   }
@@ -166,7 +150,7 @@
   }
   function fallback(){failed=true;root.classList.remove('three-ready');clearTimeout(previous);cancelAnimationFrame(timer);}
   async function init(){
-    const imgs=await Promise.all(['dasheng.png','dasheng-happy.png','glove-a.png'].map(async name=>{
+    const imgs=await Promise.all(['official-model-front.png','dasheng-happy.png'].map(async name=>{
       const img=new Image();img.src='../assets/'+name;await img.decode();return img;
     }));
     const T=window.THREE;
@@ -185,7 +169,7 @@
     ctx.fillStyle=grad;ctx.fillRect(0,0,256,128);ctx.fillStyle='#ffffff';
     ctx.fillRect(22,18,33,51);ctx.fillRect(145,25,40,30);ctx.fillRect(215,33,8,52);
     const env=new T.CanvasTexture(envCanvas);env.mapping=T.EquirectangularReflectionMapping;env.colorSpace=T.SRGBColorSpace;scene.environment=env;
-    actor=buildDasheng(T,imgs);shapeHand=bindRelaxedHand(T,actor,imgs[2],palmRest);scene.add(actor.root,actor.cloud);frame();
+    actor=buildDasheng(T,imgs);officialStaff=buildOfficialStaffMotion(T,actor);scene.add(actor.root,actor.cloud);frame();
   }
   new ResizeObserver(resize).observe(stage);
   document.addEventListener('visibilitychange',frame);

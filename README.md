@@ -16,7 +16,7 @@
 
 ## 快速安装
 
-Mac 用户可下载 [大圣喵通用安装包](https://github.com/alankongx/desktop-pet/releases/download/dasheng-v2.2.5/DashengPet-2.2.5-macOS-Universal.pkg)，安装后从「应用程序」打开「大圣喵」。
+Mac 用户可下载 [大圣喵通用安装包](https://github.com/alankongx/desktop-pet/releases/download/dasheng-v2.2.10/DashengPet-2.2.10-macOS-Universal.pkg)，安装后从「应用程序」打开「大圣喵」。
 
 Windows 10/11 x64 可直接下载 [大圣喵 3D 一键安装包](https://github.com/alankongx/desktop-pet/releases/download/dasheng-v2.2.5/DashengPet-2.2.5-Windows-x64-Setup.exe)，双击后安装并启动。
 
